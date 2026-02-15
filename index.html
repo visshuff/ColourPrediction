@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Colour Predictor - High Profit</title>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+    <style>
+        :root {
+            --bg: #0b0e11; --card: #151a21; --text: #eaeaea; --border: #2b3139;
+            --accent: #fcd535; --green: #02c076; --red: #f84960; --violet: #9c27b0;
+        }
+        [data-theme="light"] {
+            --bg: #ffffff; --card: #f8f9fa; --text: #1a1a1a; --border: #dee2e6;
+        }
+
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; transition: 0.3s; padding-bottom: 50px; }
+        .header { background: var(--card); padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
+        #themeBtn { background: var(--card); color: var(--text); border: 1px solid var(--border); padding: 5px 10px; border-radius: 5px; cursor: pointer; }
+
+        .wallet-section { background: linear-gradient(135deg, #1e2329, var(--card)); margin: 15px; padding: 25px; border-radius: 15px; text-align: center; border: 1px solid var(--border); }
+        .balance-amt { font-size: 35px; font-weight: bold; color: var(--accent); margin: 10px 0; }
+        
+        .timer-box { display: flex; justify-content: space-between; padding: 15px 25px; background: var(--card); margin: 10px; border-radius: 10px; border: 1px solid var(--border); }
+        .timer-clock { font-size: 24px; color: var(--red); font-weight: bold; }
+
+        .game-btns { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; padding: 15px; }
+        .btn { border: none; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer; color: white; transition: 0.2s; }
+        .btn-green { background: var(--green); } .btn-violet { background: var(--violet); } .btn-red { background: var(--red); }
+
+        /* My Bet Status */
+        .my-bet-card { background: #1e2329; margin: 10px 15px; padding: 12px; border-radius: 8px; border-left: 5px solid var(--accent); display: none; }
+
+        .history-section { background: var(--card); margin: 15px; border-radius: 10px; padding: 10px; border: 1px solid var(--border); }
+        table { width: 100%; text-align: center; border-collapse: collapse; font-size: 14px; }
+        td, th { padding: 12px; border-bottom: 1px solid var(--border); }
+        .dot { height: 12px; width: 12px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+    </style>
+</head>
+<body data-theme="dark">
+
+<div class="header">
+    <strong>Fantasy11 - Colour Predictor</strong>
+    <button id="themeBtn" onclick="toggleTheme()">☀️ Light</button>
+</div>
+
+<div class="wallet-section">
+    <small id="userUidDisp" style="color:#848e9c">UID: Loading...</small>
+    <div class="balance-amt" id="balance">₹0.00</div>
+    <div style="display:flex; justify-content:center; gap:10px;">
+        <button onclick="alert('Go back To Fantasy11')" style="background:var(--accent); color:#000; border:none; padding:8px 20px; border-radius:5px; font-weight:bold;">Deposite</button>
+        <button onclick="alert('Go back To Fantasy11')" style="background:none; border:1px solid var(--border); color:var(--text); padding:8px 20px; border-radius:5px;">Withdraw</button>
+    </div>
+</div>
+
+<div class="timer-box">
+    <div><small style="color:#848e9c">Period ID</small><br><span id="periodId" style="font-weight:bold;">---</span></div>
+    <div style="text-align:right"><small style="color:#848e9c">Time Left</small><br><span class="timer-clock" id="countdown">00:00</span></div>
+</div>
+
+<div class="game-btns">
+    <button class="btn btn-green" onclick="bet('Green')">Green</button>
+    <button class="btn btn-violet" onclick="bet('Violet')">Violet</button>
+    <button class="btn btn-red" onclick="bet('Red')">Red</button>
+</div>
+
+<div id="betInfo" class="my-bet-card">
+    <small style="color:#848e9c">Your Bet:</small>
+    <div style="display:flex; justify-content:space-between; margin-top:5px;">
+        <span id="betColorText" style="font-weight:bold;">---</span>
+        <span id="betAmountText" style="color:var(--accent); font-weight:bold;">₹0</span>
+    </div>
+</div>
+
+<div class="history-section">
+    <h4 style="margin: 10px 0;">Records (Last 10 Rounds)</h4>
+    <table id="historyTable">
+        <thead><tr><th>Period</th><th>Color</th><th>Result</th></tr></thead>
+        <tbody id="historyBody"></tbody>
+    </table>
+</div>
+
+<script>
+    const firebaseConfig = { databaseURL: "https://snapvibe-ontop-default-rtdb.firebaseio.com" };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // --- FANTASY11 SYNC FIX ---
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlUid = urlParams.get('uid');
+    const userUID = urlUid || localStorage.getItem("userUID") || "U" + Math.floor(Math.random()*90000);
+    localStorage.setItem("userUID", userUID);
+    document.getElementById("userUidDisp").innerText = "UID: " + userUID;
+
+    function toggleTheme() {
+        const body = document.body;
+        const btn = document.getElementById("themeBtn");
+        if (body.getAttribute("data-theme") === "dark") {
+            body.setAttribute("data-theme", "light");
+            btn.innerText = "🌙 Dark";
+        } else {
+            body.setAttribute("data-theme", "dark");
+            btn.innerText = "☀️ Light";
+        }
+    }
+
+    // Fantasy11 Balance Folders Sync
+    db.ref(`users/${userUID}`).on('value', (s) => {
+        const d = s.val() || {};
+        const total = (d.balance || 0) + (d.winBal || 0);
+        document.getElementById("balance").innerText = "₹" + total.toFixed(2);
+    });
+
+    // --- GLOBAL SYNC TIMER ---
+    let roundStep = 1;
+    setInterval(() => {
+        const now = Date.now();
+        const timeLeft = 60 - (Math.floor(now / 1000) % 60);
+        const pId = Math.floor(now / 60000);
+        
+        document.getElementById("countdown").innerText = `00:${timeLeft < 10 ? '0'+timeLeft : timeLeft}`;
+        document.getElementById("periodId").innerText = pId;
+
+        if (timeLeft === 59) { 
+            document.getElementById("betInfo").style.display = 'none'; // Clear bet info on new round
+        }
+        if (timeLeft === 1) { 
+            processRoundResult(pId);
+        }
+    }, 1000);
+
+    async function processRoundResult(pId) {
+        const betsSnap = await db.ref('current_bets').get();
+        const allBets = betsSnap.val() || {};
+        
+        let totals = { Green: 0, Red: 0, Violet: 0 };
+        Object.values(allBets).forEach(b => { totals[b.color] += b.amount; });
+
+        let winColor;
+        const totalBets = totals.Green + totals.Red + totals.Violet;
+
+        if (totalBets > 0) {
+            // --- USER BETTING LOGIC (3/5 PROFIT) ---
+            if ([1, 3, 5].includes(roundStep)) {
+                // Profit Mode: Wo color jisme sabse KAM paisa laga hai
+                let minAmt = Math.min(totals.Green, totals.Red);
+                winColor = (totals.Green === minAmt) ? "Green" : "Red";
+                
+                // 10% chance ki Violet bhi aa jaye agar usme bet zero ho
+                if(totals.Violet === 0 && Math.random() < 0.1) winColor = "Violet";
+            } else {
+                // Trust Mode: Randomly choose Red or Green
+                winColor = Math.random() > 0.5 ? "Green" : "Red";
+            }
+        } else {
+            // --- ANALYSIS MODE (NO BETS) ---
+            // Har round ek naya random chance hai (No fixed sequence)
+            let rand = Math.floor(Math.random() * 100); 
+            
+            if (rand < 34) {
+                winColor = "Green";
+            } else if (rand < 67) {
+                winColor = "Red";
+            } else {
+                winColor = "Violet";
+            }
+            // Is logic se kabhi lagatar 3 baar Red aa sakta hai, toh kabhi mix.
+        }
+
+        // Winning Distribution (Fantasy11 WinBal Sync)
+        for (let uid in allBets) {
+            if (allBets[uid].color === winColor) {
+                db.ref(`users/${uid}/winBal`).transaction(current => {
+                    return (current || 0) + (allBets[uid].amount * 1.9);
+                });
+            }
+        }
+
+        // History update aur Step increment
+        await db.ref('history').push({ pId: pId, winColor: winColor });
+        await db.ref('current_bets').remove();
+        
+        // Round tracker ko 1 se 5 ke beech ghumate rehna
+        roundStep = (roundStep >= 5) ? 1 : roundStep + 1;
+    }
+
+    function bet(color) {
+        let amt = prompt(`${color} Bet Amount:`, "100");
+        const betAmt = parseInt(amt);
+        if (betAmt >= 10) {
+            db.ref(`users/${userUID}`).once('value', async s => {
+                const d = s.val() || {};
+                let bonus = d.balance || 0;
+                let win = d.winBal || 0;
+                
+                if ((bonus + win) >= betAmt) {
+                    // Logic: Use Bonus first, then Winning
+                    if (bonus >= betAmt) { bonus -= betAmt; } 
+                    else { let rem = betAmt - bonus; bonus = 0; win -= rem; }
+
+                    await db.ref(`users/${userUID}`).update({ balance: bonus, winBal: win });
+                    await db.ref(`current_bets/${userUID}`).set({ color, amount: betAmt });
+                    
+                    document.getElementById("betInfo").style.display = 'block';
+                    document.getElementById("betColorText").innerText = color;
+                    document.getElementById("betColorText").style.color = `var(--${color.toLowerCase()})`;
+                    document.getElementById("betAmountText").innerText = "₹" + betAmt;
+                } else alert("Paisa nahi hai bhai!");
+            });
+        }
+    }
+
+    // Load Last 10 Rounds
+    db.ref('history').limitToLast(10).on('value', s => {
+        const tbody = document.getElementById("historyBody");
+        tbody.innerHTML = "";
+        let data = s.val();
+        if(data) Object.values(data).reverse().forEach(v => {
+            tbody.innerHTML += `<tr><td>${v.pId}</td><td><span class="dot" style="background:var(--${v.winColor.toLowerCase()})"></span></td><td>${v.winColor}</td></tr>`;
+        });
+    });
+</script>
+</body>
+</html>
