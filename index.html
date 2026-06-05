@@ -75,16 +75,19 @@
         #lockScreen { position: absolute; top:0; left:0; width: 100%; height: 100%; background: rgba(20,20,22,0.8); z-index: 50; display: none; align-items: center; justify-content: center; border-radius: 10px; }
         .lock-msg { font-size: 24px; color: var(--red); font-weight: bold; background: #000; padding: 10px 20px; border-radius: 8px; border: 1px solid var(--red); text-transform: uppercase; letter-spacing: 2px; box-shadow: 0 0 15px rgba(248,73,96,0.5); }
    
-   /* Professional Result Popup Styles - FIXED & OPTIMIZED */
-.result-box { background: var(--card2); width: 85%; max-width: 320px; border-radius: 20px; padding: 25px 20px; text-align: center; position: relative; animation: popIn 0.3s; border: 3px solid var(--border); color: var(--text); box-shadow: 0 10px 25px rgba(0,0,0,0.6); }
-.res-title { font-size: 26px; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
-.res-amt { font-size: 36px; font-weight: 800; margin: 15px 0; font-family: 'Courier New', monospace; }
-.res-details { background: var(--card); padding: 12px; border-radius: 12px; font-size: 14px; color: #bbb; border: 1px solid var(--border); line-height: 1.6; }
-.win-theme { border-color: var(--green); color: var(--green); background: linear-gradient(180deg, #1e3c2f 0%, var(--card2) 100%); }
-.win-theme .res-amt { color: var(--gold); text-shadow: 0 0 10px rgba(252, 213, 53, 0.3); }
-.lose-theme { border-color: var(--red); color: var(--red); background: linear-gradient(180deg, #3c1e23 0%, var(--card2) 100%); }
-.lose-theme .res-amt { color: #fff; }
-@keyframes popIn { 0% {transform: scale(0.7); opacity: 0;} 100% {transform: scale(1); opacity: 1;} }
+        /* Professional Result Popup Styles */
+        .result-box { background: var(--card2); width: 85%; max-width: 320px; border-radius: 20px; padding: 25px 20px; text-align: center; position: relative; animation: popIn 0.3s; border: 3px solid var(--border); color: var(--text); box-shadow: 0 10px 25px rgba(0,0,0,0.6); }
+        .res-title { font-size: 26px; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+        .res-amt { font-size: 36px; font-weight: 800; margin: 15px 0; font-family: 'Courier New', monospace; }
+        .res-details { background: var(--card); padding: 12px; border-radius: 12px; font-size: 14px; color: #bbb; border: 1px solid var(--border); line-height: 1.6; }
+        .win-theme { border-color: var(--green); color: var(--green); background: linear-gradient(180deg, #1e3c2f 0%, var(--card2) 100%); }
+        .win-theme .res-amt { color: var(--gold); text-shadow: 0 0 10px rgba(252, 213, 53, 0.3); }
+        .lose-theme { border-color: var(--red); color: var(--red); background: linear-gradient(180deg, #3c1e23 0%, var(--card2) 100%); }
+        .lose-theme .res-amt { color: #fff; }
+        @keyframes popIn { 0% {transform: scale(0.7); opacity: 0;} 100% {transform: scale(1); opacity: 1;} }
+        
+        .close-popup-btn { width: 100%; padding: 12px; margin-top: 15px; background: var(--gold); color: #000; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); transition: 0.2s; text-transform: uppercase; letter-spacing: 1px; }
+        .close-popup-btn:active { transform: scale(0.95); }
     </style>
 </head>
 <body>
@@ -168,13 +171,13 @@
     <button class="custom-alert-btn" onclick="closeCustomAlert()">OK</button>
 </div>
 
-<!-- Result Modal -->
+<!-- Result Modal (Fixed with Manual Close Button) -->
 <div class="overlay" id="resultOverlay">
     <div class="result-box" id="resultCard">
         <div class="res-title" id="resTitle"></div>
         <div class="res-amt" id="resAmt"></div>
         <div class="res-details" id="resDetails"></div>
-        <div style="margin-top:15px; font-size:12px; color:#999;">✓ 3 seconds auto close</div>
+        <button class="close-popup-btn" onclick="document.getElementById('resultOverlay').style.display='none'">Close</button>
     </div>
 </div>
 
@@ -195,7 +198,6 @@
     let myCurrentBets = []; 
     
     // --- OFFLINE BACKFILL ENGINE ---
-    // Jab app khulegi toh ye script dekhegi ki agar pichle 15 minute mein koi game nahi khela gaya toh ye unka data history mein daal dega
     function generatePastMissingHistory() {
         let now = Date.now();
         for(let i=1; i<=15; i++) {
@@ -300,6 +302,9 @@
         if (currentPeriod !== currentPeriodMath) {
             let previousPeriod = currentPeriod;
             
+            // BUG FIX: Array ko clear karne se pehle ek backup copy bana li
+            let betsToProcess = [...myCurrentBets]; 
+            
             if (previousPeriod !== "") {
                 db.ref(`wingo/future_results/${previousPeriod}`).once('value', (s) => {
                     let resData = s.val();
@@ -313,7 +318,8 @@
                 });
 
                 setTimeout(() => {
-                    processWingoResult(previousPeriod, myCurrentBets);
+                    // BUG FIX: Backup array ko hi pass kar rahe hain jisme current bet data store hai
+                    processWingoResult(previousPeriod, betsToProcess);
                 }, 500);
             }
 
@@ -347,7 +353,6 @@
                 closeBet();
             }
         } else {
-            // Naya round start hote hi yahan isLocked false ho jayega aur lockScreen hide ho jayegi
             if(isLocked) {
                 isLocked = false;
                 document.getElementById("lockScreen").style.display = 'none';
@@ -452,15 +457,25 @@
                 let won = false;
                 let multiplier = 0;
 
-                if(!isNaN(bet.type) && parseInt(bet.type) === winNum) { won = true; multiplier = 9; }
-                else if(bet.type === winSize) { won = true; multiplier = 1.9; }
+                // MULTIPLIER FIXES
+                if(!isNaN(bet.type) && parseInt(bet.type) === winNum) { 
+                    won = true; multiplier = 8.88; // Number win 8.88x
+                }
+                else if(bet.type === winSize) { 
+                    won = true; multiplier = 1.96; // Size win 1.96x
+                }
                 else if(winColor.includes(bet.type)) {
                     won = true;
+                    // Agar zero ya 5 aaya toh color par half win milta hai
                     if((winNum === 0 && bet.type === "Red") || (winNum === 5 && bet.type === "Green")) {
-                        multiplier = 1.5;
+                        multiplier = 1.47; 
                     } 
-                    else if(bet.type === "Violet") { multiplier = 4.5; }
-                    else { multiplier = 1.9; }
+                    else if(bet.type === "Violet") { 
+                        multiplier = 4.44; // Violet ke liye
+                    }
+                    else { 
+                        multiplier = 1.98; // Pure Color win 1.98x
+                    }
                 }
 
                 if(won) { totalWinAmt += (bet.amount * multiplier); }
@@ -496,17 +511,11 @@
             <div style="font-size:12px; color:#888;">Period ID: ${period}</div>
         `;
 
-        // Auto-close text hata kar wahan Premium Manual Close Button laga diya
-        let footerDiv = document.getElementById("resDetails").nextElementSibling;
-        if (footerDiv) {
-            footerDiv.innerHTML = `<button onclick="document.getElementById('resultOverlay').style.display='none'" style="width: 100%; padding: 12px; margin-top: 15px; background: var(--gold); color: #000; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); transition: 0.2s; text-transform: uppercase; letter-spacing: 1px;">Close</button>`;
-            footerDiv.style.marginTop = "0px";
-        }
-
+        // Yaha se Timeout Hata Diya hai! Popup band nahi hoga ab automatically
         overlay.style.display = 'flex';
     }
     
-    // --- LOAD HISTORY (FIXED) ---
+    // --- LOAD HISTORY ---
     db.ref('wingo/history').orderByChild('timestamp').limitToLast(10).on('value', s => {
         const tbody = document.getElementById("historyBody");
         tbody.innerHTML = "";
@@ -516,14 +525,12 @@
             arr.sort((a,b) => String(b.period).localeCompare(String(a.period)));
             
             arr.forEach(v => {
-                // Fixed logic array ya string format ke liye
                 let colorsStr = Array.isArray(v.colors) ? v.colors.join(',') : (String(v.colors) || "");
                 let colDots = colorsStr.split(',').filter(c => c).map(c => {
                     let bg = c==="Green" ? "var(--green)" : (c==="Red" ? "var(--red)" : "var(--violet)");
                     return `<span class="dot" style="background:${bg}"></span>`;
                 }).join(' ');
 
-                // Fixed color checking code
                 let numberColor = colorsStr.includes('Green') ? 'var(--green)' : (colorsStr.includes('Red') ? 'var(--red)' : 'var(--violet)');
 
                 tbody.innerHTML += `
