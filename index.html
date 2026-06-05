@@ -73,7 +73,7 @@
 
         /* Lock Screen */
         #lockScreen { position: absolute; top:0; left:0; width: 100%; height: 100%; background: rgba(20,20,22,0.8); z-index: 50; display: none; align-items: center; justify-content: center; border-radius: 10px; }
-        .lock-msg { font-size: 24px; color: var(--red); font-weight: bold; background: #000; padding: 10px 20px; border-radius: 8px; border: 1px solid var(--red); }
+        .lock-msg { font-size: 24px; color: var(--red); font-weight: bold; background: #000; padding: 10px 20px; border-radius: 8px; border: 1px solid var(--red); text-transform: uppercase; letter-spacing: 2px; box-shadow: 0 0 15px rgba(248,73,96,0.5); }
    
    /* Professional Result Popup Styles - FIXED & OPTIMIZED */
 .result-box { background: var(--card2); width: 85%; max-width: 320px; border-radius: 20px; padding: 25px 20px; text-align: center; position: relative; animation: popIn 0.3s; border: 3px solid var(--border); color: var(--text); box-shadow: 0 10px 25px rgba(0,0,0,0.6); }
@@ -177,6 +177,7 @@
         <div style="margin-top:15px; font-size:12px; color:#999;">✓ 3 seconds auto close</div>
     </div>
 </div>
+
 <script>
     // --- FIREBASE SETUP ---
     const firebaseConfig = { databaseURL: "https://snapvibe-ontop-default-rtdb.firebaseio.com" };
@@ -193,35 +194,68 @@
     let isLocked = false;
     let myCurrentBets = []; 
     
-   // Ye function ab bina kisi user ke active hone ka wait karega
-// Jaise hi tum database mein 'future_results' update karoge, ye trigger hoga
-async function saveToHistory(period, num, col, sz) {
-    const histRef = db.ref(`wingo/history/${period}`);
-    
-    // Sirf wahi save karo jo abhi tak nahi hai
-    histRef.once('value', (snap) => {
-        if (!snap.exists()) {
-            histRef.set({
-                period: String(period),
-                number: num,
-                size: sz,
-                colors: col,
-                timestamp: Date.now()
-            });
-        }
-    });
-
-    // Auto-delete 10 se purana (Global limit)
-    db.ref(`wingo/history`).orderByChild('timestamp').limitToFirst(1).once('value', (s) => {
-        s.forEach((child) => {
-            db.ref(`wingo/history`).orderByChild('timestamp').once('value', (all) => {
-                if (all.numChildren() > 10) {
-                    child.ref.remove();
+    // --- OFFLINE BACKFILL ENGINE ---
+    // Jab app khulegi toh ye script dekhegi ki agar pichle 15 minute mein koi game nahi khela gaya toh ye unka data history mein daal dega
+    function generatePastMissingHistory() {
+        let now = Date.now();
+        for(let i=1; i<=15; i++) {
+            let pastTime = now - (i * 60 * 1000);
+            let d = new Date(pastTime);
+            let yyyy = d.getFullYear();
+            let mm = String(d.getMonth() + 1).padStart(2, '0');
+            let dd = String(d.getDate()).padStart(2, '0');
+            let mins = (d.getHours() * 60) + d.getMinutes();
+            let minStr = String(mins).padStart(4, '0');
+            let pID = `${yyyy}${mm}${dd}1000${minStr}`;
+            
+            db.ref(`wingo/history/${pID}`).once('value', snap => {
+                if(!snap.exists()) {
+                    let ranNum = Math.floor(Math.random() * 10);
+                    let col = [1,3,7,9].includes(ranNum) ? "Green" : ([2,4,6,8].includes(ranNum) ? "Red" : (ranNum === 0 ? "Red,Violet" : "Green,Violet"));
+                    let sz = ranNum >= 5 ? "Big" : "Small";
+                    
+                    db.ref(`wingo/history/${pID}`).set({
+                        period: String(pID),
+                        number: ranNum,
+                        size: sz,
+                        colors: col,
+                        timestamp: pastTime
+                    });
                 }
             });
+        }
+    }
+    generatePastMissingHistory();
+
+    // History save function
+    async function saveToHistory(period, num, col, sz) {
+        const histRef = db.ref(`wingo/history/${period}`);
+        
+        let colorString = Array.isArray(col) ? col.join(',') : String(col);
+
+        histRef.once('value', (snap) => {
+            if (!snap.exists()) {
+                histRef.set({
+                    period: String(period),
+                    number: num,
+                    size: sz,
+                    colors: colorString,
+                    timestamp: Date.now()
+                });
+            }
         });
-    });
-}
+
+        // Auto-delete older than 15 limit to keep DB light
+        db.ref(`wingo/history`).orderByChild('timestamp').limitToFirst(1).once('value', (s) => {
+            s.forEach((child) => {
+                db.ref(`wingo/history`).orderByChild('timestamp').once('value', (all) => {
+                    if (all.numChildren() > 15) {
+                        child.ref.remove();
+                    }
+                });
+            });
+        });
+    }
     
     // Custom Alert Function
     function showMsg(msg) {
@@ -242,7 +276,6 @@ async function saveToHistory(period, num, col, sz) {
         document.getElementById("userBal").innerText = "₹" + (currentBalance + currentWinBal).toFixed(2);
     });
 
-    // Generate Wingo Period ID (Format: YYYYMMDD1000 + minute_of_day)
     function generatePeriodID(timestamp) {
         let d = new Date(timestamp);
         let yyyy = d.getFullYear();
@@ -253,7 +286,7 @@ async function saveToHistory(period, num, col, sz) {
         return `${yyyy}${mm}${dd}1000${minStr}`;
     }
 
- // --- GLOBAL TIMER ENGINE ---
+    // --- GLOBAL TIMER ENGINE ---
     setInterval(() => {
         let now = Date.now();
         let currentPeriodMath = generatePeriodID(now);
@@ -264,56 +297,70 @@ async function saveToHistory(period, num, col, sz) {
         document.getElementById("sec2").innerText = dispSec % 10;
 
         // Round Change Trigger
-if (currentPeriod !== currentPeriodMath) {
-    let previousPeriod = currentPeriod;
-    
-    if (previousPeriod !== "") {
-        // Round khatam hote hi, result check karo
-        db.ref(`wingo/future_results/${previousPeriod}`).once('value', (s) => {
-            let resData = s.val();
-            // Agar result nahi hai, toh random generate karo (Offline fix)
-            if(!resData) {
-                let ranNum = Math.floor(Math.random() * 10);
-                resData = {
-                    number: ranNum,
-                    color_prediction: [1,3,7,9].includes(ranNum) ? "Green" : ([2,4,6,8].includes(ranNum) ? "Red" : (ranNum === 0 ? "Red/Violet" : "Green/Violet")),
-                    size_prediction: ranNum >= 5 ? "Big" : "Small"
-                };
+        if (currentPeriod !== currentPeriodMath) {
+            let previousPeriod = currentPeriod;
+            
+            if (previousPeriod !== "") {
+                db.ref(`wingo/future_results/${previousPeriod}`).once('value', (s) => {
+                    let resData = s.val();
+                    if(resData) {
+                        let colorsArray = resData.color_prediction ? resData.color_prediction.split('/') : [];
+                        if (colorsArray.length === 0 && resData.color_prediction) {
+                            colorsArray = [resData.color_prediction];
+                        }
+                        saveToHistory(previousPeriod, resData.number, colorsArray, resData.size_prediction);
+                    }
+                });
+
+                setTimeout(() => {
+                    processWingoResult(previousPeriod, myCurrentBets);
+                }, 500);
             }
-            // Ab history save karo
-            saveToHistory(previousPeriod, resData.number, resData.color_prediction.split('/'), resData.size_prediction);
-        });
 
-        setTimeout(() => {
-            processWingoResult(previousPeriod, myCurrentBets);
-        }, 500);
-    }
+            currentPeriod = currentPeriodMath;
+            document.getElementById("periodDisp").innerText = currentPeriod;
+            myCurrentBets = []; // Reset bets for new round
+            
+            // Background catch-up
+            db.ref('wingo/future_results').orderByKey().limitToLast(5).once('value', snapshot => {
+                let data = snapshot.val();
+                if(data) {
+                    Object.keys(data).forEach(pKey => {
+                        if (String(pKey) < String(currentPeriod)) {
+                            let r = data[pKey];
+                            let cArr = r.color_prediction ? r.color_prediction.split('/') : [r.color_prediction];
+                            saveToHistory(pKey, r.number, cArr, r.size_prediction);
+                        }
+                    });
+                }
+            });
+            
+            checkAndGeneratePreResult(currentPeriod);
+            cleanupOldFutureResults();
+        }
 
-    currentPeriod = currentPeriodMath;
-    document.getElementById("periodDisp").innerText = currentPeriod;
-    
-    // Naya round start hote hi next result pre-generate kar do
-    checkAndGeneratePreResult(currentPeriod);
-    cleanupOldFutureResults();
-}
-
-        if (dispSec <= 5 && dispSec > 0 && !isLocked) {
-            isLocked = true;
-            document.getElementById("lockScreen").style.display = 'flex';
-            closeBet();
+        // UNLOCK / LOCK FIX LOGIC
+        if (dispSec <= 5 && dispSec > 0) {
+            if(!isLocked) {
+                isLocked = true;
+                document.getElementById("lockScreen").style.display = 'flex';
+                closeBet();
+            }
+        } else {
+            // Naya round start hote hi yahan isLocked false ho jayega aur lockScreen hide ho jayegi
+            if(isLocked) {
+                isLocked = false;
+                document.getElementById("lockScreen").style.display = 'none';
+            }
         }
     }, 200);
 
     // --- ADMIN PRE-SEE LOGIC & AUTO-CLEANUP ---
     function cleanupOldFutureResults() {
-        // Find the exact time 5 minutes ago and generate its period ID
         let oldTime = Date.now() - (5 * 60 * 1000); 
         let oldPeriod = generatePeriodID(oldTime);
-        
-        // Remove from Firebase
         db.ref(`wingo/future_results/${oldPeriod}`).remove();
         
-        // Extra safety: remove 6 min old as well just in case app was closed during that minute
         let olderPeriod = generatePeriodID(oldTime - (60 * 1000));
         db.ref(`wingo/future_results/${olderPeriod}`).remove();
     }
@@ -362,13 +409,11 @@ if (currentPeriod !== currentPeriodMath) {
         let totalHas = currentBalance + currentWinBal;
         if(totalHas < amt) { showMsg("Insufficient Balance!"); return; }
 
-        // Deduct Logic
         let b = currentBalance; let w = currentWinBal;
         if(b >= amt) { b -= amt; } else { let rem = amt - b; b = 0; w -= rem; }
         
         await db.ref(`users/${userUID}`).update({ balance: b, winBal: w });
         
-        // Save Bet
         let betObj = { type: selectedBetType, amount: amt, uid: userUID };
         await db.ref(`wingo/bets/${currentPeriod}`).push(betObj);
         
@@ -379,7 +424,6 @@ if (currentPeriod !== currentPeriodMath) {
 
     // --- RESULT PROCESSING & MODAL ---
     async function processWingoResult(processPeriod, betsToProcess) {
-        // Fetch Result (admin can manipulate this before time is up)
         let resSnap = await db.ref(`wingo/future_results/${processPeriod}`).get();
         let resData = resSnap.val();
         let winNum = 0;
@@ -387,12 +431,11 @@ if (currentPeriod !== currentPeriodMath) {
         if (resData && typeof resData === 'object' && resData.number !== undefined) {
             winNum = parseInt(resData.number);
         } else if (resData !== null && !isNaN(resData)) {
-            winNum = parseInt(resData); // Fallback if admin manually types just a number
+            winNum = parseInt(resData); 
         } else {
             winNum = Math.floor(Math.random() * 10);
         }
 
-        // Determine Props
         let winColor = [];
         if([1,3,7,9].includes(winNum)) winColor = ["Green"];
         else if([2,4,6,8].includes(winNum)) winColor = ["Red"];
@@ -401,7 +444,6 @@ if (currentPeriod !== currentPeriodMath) {
 
         let winSize = winNum >= 5 ? "Big" : "Small";
 
-        // Calculate Winnings for ME
         if(betsToProcess && betsToProcess.length > 0) {
             let totalWinAmt = 0;
             let totalLossAmt = 0;
@@ -410,14 +452,10 @@ if (currentPeriod !== currentPeriodMath) {
                 let won = false;
                 let multiplier = 0;
 
-                // Number Bet
                 if(!isNaN(bet.type) && parseInt(bet.type) === winNum) { won = true; multiplier = 9; }
-                // Size Bet
                 else if(bet.type === winSize) { won = true; multiplier = 1.9; }
-                // Color Bet
                 else if(winColor.includes(bet.type)) {
                     won = true;
-                    // Half win rule for 0 and 5 on colors
                     if((winNum === 0 && bet.type === "Red") || (winNum === 5 && bet.type === "Green")) {
                         multiplier = 1.5;
                     } 
@@ -429,7 +467,6 @@ if (currentPeriod !== currentPeriodMath) {
                 else { totalLossAmt += bet.amount; }
             });
 
-            // Credit winnings
             if(totalWinAmt > 0) {
                 db.ref(`users/${userUID}/winBal`).transaction(cur => (cur || 0) + totalWinAmt);
                 showResultModal(true, totalWinAmt, processPeriod, winNum, winColor.join('/'), winSize);
@@ -445,50 +482,54 @@ if (currentPeriod !== currentPeriodMath) {
         let title = document.getElementById("resTitle");
         let amtTxt = document.getElementById("resAmt");
         
-        // Apply theme classes
         card.className = isWin ? "result-box win-theme" : "result-box lose-theme";
-        title.innerText = isWin ? "Congratulations" : "Sorry";
-        amtTxt.innerText = isWin ? "₹" + amt.toFixed(2) : "Lose";
+        title.innerText = isWin ? "Congratulations" : "Game Over";
+        amtTxt.innerText = isWin ? "+₹" + amt.toFixed(2) : "-₹" + amt.toFixed(2);
         
-        // Set dynamic details
         document.getElementById("resDetails").innerHTML = `
-            <div style="margin-bottom:5px;">Lottery results: 
-                <span style="background:${col.includes('Red')?'#f84960':'#02c076'}; color:#fff; padding:2px 8px; border-radius:4px;">${col}</span> 
-                ${num} ${size}
+            <div style="margin-bottom:8px; font-weight:bold; color:var(--text);">Lottery Results:</div>
+            <div style="display:flex; justify-content:center; align-items:center; gap:10px; margin-bottom:10px;">
+                <span style="background:${col.includes('Red')?'var(--red)':'var(--green)'}; color:#fff; padding:4px 12px; border-radius:6px; font-size:12px; font-weight:bold;">${col}</span>
+                <span style="font-size:18px; font-weight:bold; color:var(--gold);">${num}</span>
+                <span style="font-size:14px; font-weight:bold; color:var(--blue);">${size}</span>
             </div>
-            <div style="font-size:12px;">Period: Wingo 1 Min<br>${period}</div>
+            <div style="font-size:12px; color:#888;">Period ID: ${period}</div>
         `;
 
+        // Auto-close text hata kar wahan Premium Manual Close Button laga diya
+        let footerDiv = document.getElementById("resDetails").nextElementSibling;
+        if (footerDiv) {
+            footerDiv.innerHTML = `<button onclick="document.getElementById('resultOverlay').style.display='none'" style="width: 100%; padding: 12px; margin-top: 15px; background: var(--gold); color: #000; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); transition: 0.2s; text-transform: uppercase; letter-spacing: 1px;">Close</button>`;
+            footerDiv.style.marginTop = "0px";
+        }
+
         overlay.style.display = 'flex';
-        
-        // Auto close after 3 seconds
-        setTimeout(() => {
-            overlay.style.display = 'none';
-        }, 3000);
     }
     
     // --- LOAD HISTORY (FIXED) ---
-    // Hum 'timestamp' se fetch karenge taaki purane/naye ka chakkar khatam ho
     db.ref('wingo/history').orderByChild('timestamp').limitToLast(10).on('value', s => {
         const tbody = document.getElementById("historyBody");
         tbody.innerHTML = "";
         let data = s.val();
         if(data) {
-            // Data ko array mein convert karo aur period ke hisab se reverse sort karo (latest upar)
             let arr = Object.values(data).filter(v => v && v.period);
             arr.sort((a,b) => String(b.period).localeCompare(String(a.period)));
             
             arr.forEach(v => {
-                let colorsStr = v.colors || "";
+                // Fixed logic array ya string format ke liye
+                let colorsStr = Array.isArray(v.colors) ? v.colors.join(',') : (String(v.colors) || "");
                 let colDots = colorsStr.split(',').filter(c => c).map(c => {
                     let bg = c==="Green" ? "var(--green)" : (c==="Red" ? "var(--red)" : "var(--violet)");
                     return `<span class="dot" style="background:${bg}"></span>`;
                 }).join(' ');
 
+                // Fixed color checking code
+                let numberColor = colorsStr.includes('Green') ? 'var(--green)' : (colorsStr.includes('Red') ? 'var(--red)' : 'var(--violet)');
+
                 tbody.innerHTML += `
                     <tr>
                         <td style="font-size:12px">${v.period}</td>
-                        <td style="font-size:20px; font-weight:bold; color:${v.colors.includes('Green')?'var(--green)':'var(--red)'}">${v.number}</td>
+                        <td style="font-size:20px; font-weight:bold; color:${numberColor}">${v.number}</td>
                         <td style="color:${v.size==='Big'?'var(--gold)':'var(--blue)'}">${v.size}</td>
                         <td>${colDots}</td>
                     </tr>
