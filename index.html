@@ -228,11 +228,18 @@
 
         // Round Change Trigger
         if (currentPeriod !== currentPeriodMath) {
+            let previousPeriod = currentPeriod;
             currentPeriod = currentPeriodMath;
             document.getElementById("periodDisp").innerText = currentPeriod;
+            
+            // Process previous round result BEFORE resetting bets
+            if (previousPeriod !== "") {
+                processWingoResult(previousPeriod, myCurrentBets);
+            }
+
             isLocked = false;
             document.getElementById("lockScreen").style.display = 'none';
-            myCurrentBets = []; // Reset bets for new round
+            myCurrentBets = []; // Safe to reset bets for the new round now
             
             checkAndGeneratePreResult(currentPeriod);
             cleanupOldFutureResults(); // Call the 5-min auto delete
@@ -243,12 +250,6 @@
             isLocked = true;
             document.getElementById("lockScreen").style.display = 'flex';
             closeBet();
-        }
-
-        // Result Process trigger exactly at 0
-        if (dispSec === 0 && isLocked) {
-            isLocked = false; // Prevent multiple triggers
-            processWingoResult(currentPeriod);
         }
 
     }, 200);
@@ -323,10 +324,11 @@
         
         myCurrentBets.push(betObj);
         closeBet();
+        showMsg("Bet Placed Successfully!");
     }
 
     // --- RESULT PROCESSING & MODAL ---
-    async function processWingoResult(processPeriod) {
+    async function processWingoResult(processPeriod, betsToProcess) {
         // Fetch Result (admin can manipulate this before time is up)
         let resSnap = await db.ref(`wingo/future_results/${processPeriod}`).get();
         let resData = resSnap.val();
@@ -358,11 +360,11 @@
         }
 
         // Calculate Winnings for ME
-        if(myCurrentBets.length > 0) {
+        if(betsToProcess && betsToProcess.length > 0) {
             let totalWinAmt = 0;
             let totalLossAmt = 0;
 
-            myCurrentBets.forEach(bet => {
+            betsToProcess.forEach(bet => {
                 let won = false;
                 let multiplier = 0;
 
@@ -426,7 +428,8 @@
             arr.sort((a,b) => String(b.period).localeCompare(String(a.period)));
             
             arr.slice(0, 10).forEach(v => {
-                let colDots = v.colors.split(',').map(c => {
+                let colorsStr = v.colors || "";
+                let colDots = colorsStr.split(',').filter(c => c).map(c => {
                     let bg = c==="Green" ? "var(--green)" : (c==="Red" ? "var(--red)" : "var(--violet)");
                     return `<span class="dot" style="background:${bg}"></span>`;
                 }).join(' ');
