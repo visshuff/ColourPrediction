@@ -74,6 +74,17 @@
         /* Lock Screen */
         #lockScreen { position: absolute; top:0; left:0; width: 100%; height: 100%; background: rgba(20,20,22,0.8); z-index: 50; display: none; align-items: center; justify-content: center; border-radius: 10px; }
         .lock-msg { font-size: 24px; color: var(--red); font-weight: bold; background: #000; padding: 10px 20px; border-radius: 8px; border: 1px solid var(--red); }
+   
+   /* Professional Result Popup Styles - FIXED & OPTIMIZED */
+.result-box { background: var(--card2); width: 85%; max-width: 320px; border-radius: 20px; padding: 25px 20px; text-align: center; position: relative; animation: popIn 0.3s; border: 3px solid var(--border); color: var(--text); box-shadow: 0 10px 25px rgba(0,0,0,0.6); }
+.res-title { font-size: 26px; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+.res-amt { font-size: 36px; font-weight: 800; margin: 15px 0; font-family: 'Courier New', monospace; }
+.res-details { background: var(--card); padding: 12px; border-radius: 12px; font-size: 14px; color: #bbb; border: 1px solid var(--border); line-height: 1.6; }
+.win-theme { border-color: var(--green); color: var(--green); background: linear-gradient(180deg, #1e3c2f 0%, var(--card2) 100%); }
+.win-theme .res-amt { color: var(--gold); text-shadow: 0 0 10px rgba(252, 213, 53, 0.3); }
+.lose-theme { border-color: var(--red); color: var(--red); background: linear-gradient(180deg, #3c1e23 0%, var(--card2) 100%); }
+.lose-theme .res-amt { color: #fff; }
+@keyframes popIn { 0% {transform: scale(0.7); opacity: 0;} 100% {transform: scale(1); opacity: 1;} }
     </style>
 </head>
 <body>
@@ -160,15 +171,12 @@
 <!-- Result Modal -->
 <div class="overlay" id="resultOverlay">
     <div class="result-box" id="resultCard">
-        <div class="res-title" id="resTitle">YOU WIN!</div>
-        <div class="res-amt" id="resAmt">+₹0</div>
-        <div class="res-details" id="resDetails">
-            Period: 000<br>Number: 0 | Color: Red<br>Size: Small
-        </div>
-        <button class="btn-close-res" onclick="document.getElementById('resultOverlay').style.display='none'">CLOSE</button>
+        <div class="res-title" id="resTitle"></div>
+        <div class="res-amt" id="resAmt"></div>
+        <div class="res-details" id="resDetails"></div>
+        <div style="margin-top:15px; font-size:12px; color:#999;">✓ 3 seconds auto close</div>
     </div>
 </div>
-
 <script>
     // --- FIREBASE SETUP ---
     const firebaseConfig = { databaseURL: "https://snapvibe-ontop-default-rtdb.firebaseio.com" };
@@ -184,7 +192,37 @@
     let currentPeriod = "";
     let isLocked = false;
     let myCurrentBets = []; 
+    
+   // Ye function ab bina kisi user ke active hone ka wait karega
+// Jaise hi tum database mein 'future_results' update karoge, ye trigger hoga
+async function saveToHistory(period, num, col, sz) {
+    const histRef = db.ref(`wingo/history/${period}`);
+    
+    // Sirf wahi save karo jo abhi tak nahi hai
+    histRef.once('value', (snap) => {
+        if (!snap.exists()) {
+            histRef.set({
+                period: String(period),
+                number: num,
+                size: sz,
+                colors: col,
+                timestamp: Date.now()
+            });
+        }
+    });
 
+    // Auto-delete 10 se purana (Global limit)
+    db.ref(`wingo/history`).orderByChild('timestamp').limitToFirst(1).once('value', (s) => {
+        s.forEach((child) => {
+            db.ref(`wingo/history`).orderByChild('timestamp').once('value', (all) => {
+                if (all.numChildren() > 10) {
+                    child.ref.remove();
+                }
+            });
+        });
+    });
+}
+    
     // Custom Alert Function
     function showMsg(msg) {
         document.getElementById("customAlertMsg").innerText = msg;
@@ -215,43 +253,55 @@
         return `${yyyy}${mm}${dd}1000${minStr}`;
     }
 
-    // --- GLOBAL TIMER ENGINE ---
+ // --- GLOBAL TIMER ENGINE ---
     setInterval(() => {
         let now = Date.now();
         let currentPeriodMath = generatePeriodID(now);
         let secondsLeft = 60 - Math.floor((now / 1000) % 60);
         
-        // Timer display logic
         let dispSec = secondsLeft === 60 ? 0 : secondsLeft;
         document.getElementById("sec1").innerText = Math.floor(dispSec / 10);
         document.getElementById("sec2").innerText = dispSec % 10;
 
         // Round Change Trigger
-        if (currentPeriod !== currentPeriodMath) {
-            let previousPeriod = currentPeriod;
-            currentPeriod = currentPeriodMath;
-            document.getElementById("periodDisp").innerText = currentPeriod;
-            
-            // Process previous round result BEFORE resetting bets
-            if (previousPeriod !== "") {
-                processWingoResult(previousPeriod, myCurrentBets);
+if (currentPeriod !== currentPeriodMath) {
+    let previousPeriod = currentPeriod;
+    
+    if (previousPeriod !== "") {
+        // Round khatam hote hi, result check karo
+        db.ref(`wingo/future_results/${previousPeriod}`).once('value', (s) => {
+            let resData = s.val();
+            // Agar result nahi hai, toh random generate karo (Offline fix)
+            if(!resData) {
+                let ranNum = Math.floor(Math.random() * 10);
+                resData = {
+                    number: ranNum,
+                    color_prediction: [1,3,7,9].includes(ranNum) ? "Green" : ([2,4,6,8].includes(ranNum) ? "Red" : (ranNum === 0 ? "Red/Violet" : "Green/Violet")),
+                    size_prediction: ranNum >= 5 ? "Big" : "Small"
+                };
             }
+            // Ab history save karo
+            saveToHistory(previousPeriod, resData.number, resData.color_prediction.split('/'), resData.size_prediction);
+        });
 
-            isLocked = false;
-            document.getElementById("lockScreen").style.display = 'none';
-            myCurrentBets = []; // Safe to reset bets for the new round now
-            
-            checkAndGeneratePreResult(currentPeriod);
-            cleanupOldFutureResults(); // Call the 5-min auto delete
-        }
+        setTimeout(() => {
+            processWingoResult(previousPeriod, myCurrentBets);
+        }, 500);
+    }
 
-        // Lock at 5 seconds
+    currentPeriod = currentPeriodMath;
+    document.getElementById("periodDisp").innerText = currentPeriod;
+    
+    // Naya round start hote hi next result pre-generate kar do
+    checkAndGeneratePreResult(currentPeriod);
+    cleanupOldFutureResults();
+}
+
         if (dispSec <= 5 && dispSec > 0 && !isLocked) {
             isLocked = true;
             document.getElementById("lockScreen").style.display = 'flex';
             closeBet();
         }
-
     }, 200);
 
     // --- ADMIN PRE-SEE LOGIC & AUTO-CLEANUP ---
@@ -351,14 +401,6 @@
 
         let winSize = winNum >= 5 ? "Big" : "Small";
 
-        // Save to History (Only one client does this ideally, but checking exists prevents overwrite)
-        let histSnap = await db.ref(`wingo/history/${processPeriod}`).get();
-        if(!histSnap.exists()){
-            await db.ref(`wingo/history/${processPeriod}`).set({
-                period: String(processPeriod), number: winNum, size: winSize, colors: winColor.join(',')
-            });
-        }
-
         // Calculate Winnings for ME
         if(betsToProcess && betsToProcess.length > 0) {
             let totalWinAmt = 0;
@@ -398,36 +440,45 @@
     }
 
     function showResultModal(isWin, amt, period, num, col, size) {
+        let overlay = document.getElementById('resultOverlay');
         let card = document.getElementById("resultCard");
         let title = document.getElementById("resTitle");
         let amtTxt = document.getElementById("resAmt");
         
-        document.getElementById("resDetails").innerHTML = `Period: ${period}<br>Number: <span style='color:#fff;font-weight:bold'>${num}</span> | Color: ${col}<br>Size: ${size}`;
+        // Apply theme classes
+        card.className = isWin ? "result-box win-theme" : "result-box lose-theme";
+        title.innerText = isWin ? "Congratulations" : "Sorry";
+        amtTxt.innerText = isWin ? "₹" + amt.toFixed(2) : "Lose";
+        
+        // Set dynamic details
+        document.getElementById("resDetails").innerHTML = `
+            <div style="margin-bottom:5px;">Lottery results: 
+                <span style="background:${col.includes('Red')?'#f84960':'#02c076'}; color:#fff; padding:2px 8px; border-radius:4px;">${col}</span> 
+                ${num} ${size}
+            </div>
+            <div style="font-size:12px;">Period: Wingo 1 Min<br>${period}</div>
+        `;
 
-        if(isWin) {
-            card.style.borderColor = "var(--green)"; title.style.color = "var(--green)";
-            title.innerText = "WINNING!"; amtTxt.innerText = "+₹" + amt.toFixed(2);
-            amtTxt.style.color = "var(--green)";
-        } else {
-            card.style.borderColor = "var(--border)"; title.style.color = "var(--border)";
-            title.innerText = "LOSS!"; amtTxt.innerText = "-₹" + amt.toFixed(2);
-            amtTxt.style.color = "var(--text)";
-        }
-        document.getElementById("resultOverlay").style.display = 'flex';
+        overlay.style.display = 'flex';
+        
+        // Auto close after 3 seconds
+        setTimeout(() => {
+            overlay.style.display = 'none';
+        }, 3000);
     }
-
-    // --- LOAD HISTORY ---
-    // Added orderByKey() and a filter to prevent corrupted data from breaking the table
-    db.ref('wingo/history').orderByKey().limitToLast(15).on('value', s => {
+    
+    // --- LOAD HISTORY (FIXED) ---
+    // Hum 'timestamp' se fetch karenge taaki purane/naye ka chakkar khatam ho
+    db.ref('wingo/history').orderByChild('timestamp').limitToLast(10).on('value', s => {
         const tbody = document.getElementById("historyBody");
         tbody.innerHTML = "";
         let data = s.val();
         if(data) {
-            // Check mapping and ignore any empty records
+            // Data ko array mein convert karo aur period ke hisab se reverse sort karo (latest upar)
             let arr = Object.values(data).filter(v => v && v.period);
             arr.sort((a,b) => String(b.period).localeCompare(String(a.period)));
             
-            arr.slice(0, 10).forEach(v => {
+            arr.forEach(v => {
                 let colorsStr = v.colors || "";
                 let colDots = colorsStr.split(',').filter(c => c).map(c => {
                     let bg = c==="Green" ? "var(--green)" : (c==="Red" ? "var(--red)" : "var(--violet)");
@@ -445,6 +496,7 @@
             });
         }
     });
+    
 </script>
 </body>
 </html>
