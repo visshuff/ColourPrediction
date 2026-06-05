@@ -1,224 +1,446 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Colour Predictor - High Profit</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Wingo 1Min - Fantasy11</title>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <style>
+        /* TASHAN WIN THEME */
         :root {
-            --bg: #0b0e11; --card: #151a21; --text: #eaeaea; --border: #2b3139;
-            --accent: #fcd535; --green: #02c076; --red: #f84960; --violet: #9c27b0;
-        }
-        [data-theme="light"] {
-            --bg: #ffffff; --card: #f8f9fa; --text: #1a1a1a; --border: #dee2e6;
+            --bg: #141416; --card: #202226; --card2: #282a2f; --text: #eaeaea; 
+            --green: #02c076; --red: #f84960; --violet: #9c27b0; 
+            --gold: #fcd535; --blue: #4f98fe; --border: #333;
         }
 
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; transition: 0.3s; padding-bottom: 50px; }
-        .header { background: var(--card); padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
-        #themeBtn { background: var(--card); color: var(--text); border: 1px solid var(--border); padding: 5px 10px; border-radius: 5px; cursor: pointer; }
-
-        .wallet-section { background: linear-gradient(135deg, #1e2329, var(--card)); margin: 15px; padding: 25px; border-radius: 15px; text-align: center; border: 1px solid var(--border); }
-        .balance-amt { font-size: 35px; font-weight: bold; color: var(--accent); margin: 10px 0; }
+        body { font-family: 'Arial', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 20px; user-select: none; -webkit-tap-highlight-color: transparent; }
         
-        .timer-box { display: flex; justify-content: space-between; padding: 15px 25px; background: var(--card); margin: 10px; border-radius: 10px; border: 1px solid var(--border); }
-        .timer-clock { font-size: 24px; color: var(--red); font-weight: bold; }
+        /* Header */
+        .header { display: flex; align-items: center; justify-content: space-between; padding: 15px; background: var(--card); border-bottom: 1px solid var(--border); font-size: 18px; font-weight: bold; }
+        .balance-box { background: var(--card2); padding: 5px 15px; border-radius: 20px; color: var(--gold); }
 
-        .game-btns { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; padding: 15px; }
-        .btn { border: none; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer; color: white; transition: 0.2s; }
+        /* Timer Section */
+        .timer-panel { display: flex; background: linear-gradient(135deg, #fcd535, #ffb300); margin: 10px; border-radius: 10px; color: #000; padding: 15px; align-items: center; justify-content: space-between; font-weight: bold; }
+        .period-text { font-size: 12px; opacity: 0.8; margin-bottom: 5px; }
+        .period-id { font-size: 16px; }
+        .time-box { display: flex; gap: 5px; font-size: 24px; }
+        .time-box span { background: #000; color: #fff; padding: 5px 10px; border-radius: 5px; }
+
+        /* Betting Area */
+        .game-area { background: var(--card); margin: 10px; padding: 15px; border-radius: 10px; }
+        
+        .color-btns { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .btn { padding: 12px; border: none; border-radius: 8px; color: #fff; font-weight: bold; font-size: 16px; cursor: pointer; transition: 0.2s; }
+        .btn:active { transform: scale(0.95); }
         .btn-green { background: var(--green); } .btn-violet { background: var(--violet); } .btn-red { background: var(--red); }
+        .btn-big { background: var(--gold); color: #000; } .btn-small { background: var(--blue); }
 
-        /* My Bet Status */
-        .my-bet-card { background: #1e2329; margin: 10px 15px; padding: 12px; border-radius: 8px; border-left: 5px solid var(--accent); display: none; }
+        /* Number Grid */
+        .number-grid { background: var(--card2); padding: 15px; border-radius: 10px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 15px; justify-items: center; }
+        .num-ball { width: 45px; height: 45px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 20px; font-weight: bold; color: #fff; border: 2px solid rgba(255,255,255,0.2); cursor: pointer; }
+        
+        .c-0 { background: linear-gradient(135deg, var(--red) 50%, var(--violet) 50%); }
+        .c-1, .c-3, .c-7, .c-9 { background: var(--green); }
+        .c-2, .c-4, .c-6, .c-8 { background: var(--red); }
+        .c-5 { background: linear-gradient(135deg, var(--green) 50%, var(--violet) 50%); }
 
-        .history-section { background: var(--card); margin: 15px; border-radius: 10px; padding: 10px; border: 1px solid var(--border); }
+        .size-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+        /* History Table */
+        .history { background: var(--card); margin: 10px; border-radius: 10px; padding: 10px; }
         table { width: 100%; text-align: center; border-collapse: collapse; font-size: 14px; }
-        td, th { padding: 12px; border-bottom: 1px solid var(--border); }
-        .dot { height: 12px; width: 12px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+        th, td { padding: 10px; border-bottom: 1px solid var(--border); }
+        .win-txt { font-weight: bold; }
+        .dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+
+        /* Modals (Popups) */
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; display: none; justify-content: center; align-items: center; }
+        
+        /* Bet Modal */
+        .bet-box { background: var(--card); width: 90%; max-width: 350px; border-radius: 15px; overflow: hidden; }
+        .bet-head { padding: 15px; text-align: center; font-weight: bold; font-size: 18px; color: #fff; }
+        .bet-body { padding: 20px; text-align: center; }
+        .amt-input { width: 100%; padding: 10px; font-size: 18px; text-align: center; background: var(--card2); border: 1px solid var(--border); color: #fff; border-radius: 8px; margin-bottom: 15px; }
+        .bet-footer { display: flex; }
+        .bet-footer button { flex: 1; padding: 15px; border: none; font-size: 16px; font-weight: bold; cursor: pointer; }
+        .btn-cancel { background: #333; color: #fff; }
+        .btn-confirm { background: var(--gold); color: #000; }
+
+        /* Custom Alert */
+        .custom-alert { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--card2); color: #fff; padding: 20px; border-radius: 10px; z-index: 200; display: none; border: 1px solid var(--border); box-shadow: 0 4px 10px rgba(0,0,0,0.5); text-align: center; width: 80%; max-width: 300px; }
+        .custom-alert-btn { background: var(--gold); color: #000; border: none; padding: 10px 20px; border-radius: 5px; font-weight: bold; margin-top: 15px; cursor: pointer; width: 100%; }
+
+        /* Lock Screen */
+        #lockScreen { position: absolute; top:0; left:0; width: 100%; height: 100%; background: rgba(20,20,22,0.8); z-index: 50; display: none; align-items: center; justify-content: center; border-radius: 10px; }
+        .lock-msg { font-size: 24px; color: var(--red); font-weight: bold; background: #000; padding: 10px 20px; border-radius: 8px; border: 1px solid var(--red); }
     </style>
 </head>
-<body data-theme="dark">
+<body>
 
 <div class="header">
-    <strong>Fantasy11 - Colour Predictor</strong>
-    <button id="themeBtn" onclick="toggleTheme()">☀️ Light</button>
+    <div>Wingo 1Min</div>
+    <div class="balance-box" id="userBal">₹0.00</div>
 </div>
 
-<div class="wallet-section">
-    <small id="userUidDisp" style="color:#848e9c">UID: Loading...</small>
-    <div class="balance-amt" id="balance">₹0.00</div>
-    <div style="display:flex; justify-content:center; gap:10px;">
-        <button onclick="alert('Go back To Fantasy11')" style="background:var(--accent); color:#000; border:none; padding:8px 20px; border-radius:5px; font-weight:bold;">Deposite</button>
-        <button onclick="alert('Go back To Fantasy11')" style="background:none; border:1px solid var(--border); color:var(--text); padding:8px 20px; border-radius:5px;">Withdraw</button>
+<div class="timer-panel">
+    <div>
+        <div class="period-text">Period ID</div>
+        <div class="period-id" id="periodDisp">Loading...</div>
+    </div>
+    <div style="text-align:right">
+        <div class="period-text">Time remaining</div>
+        <div class="time-box">
+            <span>0</span><span>0</span>:
+            <span id="sec1">0</span><span id="sec2">0</span>
+        </div>
     </div>
 </div>
 
-<div class="timer-box">
-    <div><small style="color:#848e9c">Period ID</small><br><span id="periodId" style="font-weight:bold;">---</span></div>
-    <div style="text-align:right"><small style="color:#848e9c">Time Left</small><br><span class="timer-clock" id="countdown">00:00</span></div>
-</div>
+<div class="game-area" style="position:relative;">
+    <div id="lockScreen"><div class="lock-msg">LOCKED</div></div>
+    
+    <div class="color-btns">
+        <button class="btn btn-green" onclick="openBet('Green')">Green</button>
+        <button class="btn btn-violet" onclick="openBet('Violet')">Violet</button>
+        <button class="btn btn-red" onclick="openBet('Red')">Red</button>
+    </div>
 
-<div class="game-btns">
-    <button class="btn btn-green" onclick="bet('Green')">Green</button>
-    <button class="btn btn-violet" onclick="bet('Violet')">Violet</button>
-    <button class="btn btn-red" onclick="bet('Red')">Red</button>
-</div>
+    <div class="number-grid">
+        <div class="num-ball c-0" onclick="openBet('0')">0</div>
+        <div class="num-ball c-1" onclick="openBet('1')">1</div>
+        <div class="num-ball c-2" onclick="openBet('2')">2</div>
+        <div class="num-ball c-3" onclick="openBet('3')">3</div>
+        <div class="num-ball c-4" onclick="openBet('4')">4</div>
+        <div class="num-ball c-5" onclick="openBet('5')">5</div>
+        <div class="num-ball c-6" onclick="openBet('6')">6</div>
+        <div class="num-ball c-7" onclick="openBet('7')">7</div>
+        <div class="num-ball c-8" onclick="openBet('8')">8</div>
+        <div class="num-ball c-9" onclick="openBet('9')">9</div>
+    </div>
 
-<div id="betInfo" class="my-bet-card">
-    <small style="color:#848e9c">Your Bet:</small>
-    <div style="display:flex; justify-content:space-between; margin-top:5px;">
-        <span id="betColorText" style="font-weight:bold;">---</span>
-        <span id="betAmountText" style="color:var(--accent); font-weight:bold;">₹0</span>
+    <div class="size-btns">
+        <button class="btn btn-big" onclick="openBet('Big')">Big</button>
+        <button class="btn btn-small" onclick="openBet('Small')">Small</button>
     </div>
 </div>
 
-<div class="history-section">
-    <h4 style="margin: 10px 0;">Records (Last 10 Rounds)</h4>
-    <table id="historyTable">
-        <thead><tr><th>Period</th><th>Color</th><th>Result</th></tr></thead>
+<div class="history">
+    <table id="histTable">
+        <thead>
+            <tr>
+                <th>Period</th><th>Number</th><th>Size</th><th>Color</th>
+            </tr>
+        </thead>
         <tbody id="historyBody"></tbody>
     </table>
 </div>
 
+<div class="overlay" id="betOverlay">
+    <div class="bet-box">
+        <div class="bet-head" id="betHead">Select Bet</div>
+        <div class="bet-body">
+            <input type="number" id="betAmount" class="amt-input" value="10" placeholder="Enter amount">
+            <div style="color:#aaa; font-size:12px;">Total balance will be deducted</div>
+        </div>
+        <div class="bet-footer">
+            <button class="btn-cancel" onclick="closeBet()">Cancel</button>
+            <button class="btn-confirm" onclick="confirmBet()">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<!-- Custom Alert Popup -->
+<div class="overlay" id="alertOverlay" style="z-index: 150;"></div>
+<div class="custom-alert" id="customAlertBox">
+    <div id="customAlertMsg" style="font-size: 16px; margin-bottom: 10px;">Message</div>
+    <button class="custom-alert-btn" onclick="closeCustomAlert()">OK</button>
+</div>
+
+<!-- Result Modal -->
+<div class="overlay" id="resultOverlay">
+    <div class="result-box" id="resultCard">
+        <div class="res-title" id="resTitle">YOU WIN!</div>
+        <div class="res-amt" id="resAmt">+₹0</div>
+        <div class="res-details" id="resDetails">
+            Period: 000<br>Number: 0 | Color: Red<br>Size: Small
+        </div>
+        <button class="btn-close-res" onclick="document.getElementById('resultOverlay').style.display='none'">CLOSE</button>
+    </div>
+</div>
+
 <script>
+    // --- FIREBASE SETUP ---
     const firebaseConfig = { databaseURL: "https://snapvibe-ontop-default-rtdb.firebaseio.com" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // --- FANTASY11 SYNC FIX ---
     const urlParams = new URLSearchParams(window.location.search);
-    const urlUid = urlParams.get('uid');
-    const userUID = urlUid || localStorage.getItem("userUID") || "U" + Math.floor(Math.random()*90000);
+    const userUID = urlParams.get('uid') || localStorage.getItem("userUID") || "U" + Math.floor(Math.random()*90000);
     localStorage.setItem("userUID", userUID);
-    document.getElementById("userUidDisp").innerText = "UID: " + userUID;
 
-    function toggleTheme() {
-        const body = document.body;
-        const btn = document.getElementById("themeBtn");
-        if (body.getAttribute("data-theme") === "dark") {
-            body.setAttribute("data-theme", "light");
-            btn.innerText = "🌙 Dark";
-        } else {
-            body.setAttribute("data-theme", "dark");
-            btn.innerText = "☀️ Light";
-        }
+    let currentBalance = 0;
+    let currentWinBal = 0;
+    let currentPeriod = "";
+    let isLocked = false;
+    let myCurrentBets = []; 
+
+    // Custom Alert Function
+    function showMsg(msg) {
+        document.getElementById("customAlertMsg").innerText = msg;
+        document.getElementById("alertOverlay").style.display = 'block';
+        document.getElementById("customAlertBox").style.display = 'block';
+    }
+    function closeCustomAlert() {
+        document.getElementById("alertOverlay").style.display = 'none';
+        document.getElementById("customAlertBox").style.display = 'none';
     }
 
-    // Fantasy11 Balance Folders Sync
+    // Sync Balance
     db.ref(`users/${userUID}`).on('value', (s) => {
         const d = s.val() || {};
-        const total = (d.balance || 0) + (d.winBal || 0);
-        document.getElementById("balance").innerText = "₹" + total.toFixed(2);
+        currentBalance = d.balance || 0;
+        currentWinBal = d.winBal || 0;
+        document.getElementById("userBal").innerText = "₹" + (currentBalance + currentWinBal).toFixed(2);
     });
 
-    // --- GLOBAL SYNC TIMER ---
-    let roundStep = 1;
+    // Generate Wingo Period ID (Format: YYYYMMDD1000 + minute_of_day)
+    function generatePeriodID(timestamp) {
+        let d = new Date(timestamp);
+        let yyyy = d.getFullYear();
+        let mm = String(d.getMonth() + 1).padStart(2, '0');
+        let dd = String(d.getDate()).padStart(2, '0');
+        let mins = (d.getHours() * 60) + d.getMinutes();
+        let minStr = String(mins).padStart(4, '0');
+        return `${yyyy}${mm}${dd}1000${minStr}`;
+    }
+
+    // --- GLOBAL TIMER ENGINE ---
     setInterval(() => {
-        const now = Date.now();
-        const timeLeft = 60 - (Math.floor(now / 1000) % 60);
-        const pId = Math.floor(now / 60000);
+        let now = Date.now();
+        let currentPeriodMath = generatePeriodID(now);
+        let secondsLeft = 60 - Math.floor((now / 1000) % 60);
         
-        document.getElementById("countdown").innerText = `00:${timeLeft < 10 ? '0'+timeLeft : timeLeft}`;
-        document.getElementById("periodId").innerText = pId;
+        // Timer display logic
+        let dispSec = secondsLeft === 60 ? 0 : secondsLeft;
+        document.getElementById("sec1").innerText = Math.floor(dispSec / 10);
+        document.getElementById("sec2").innerText = dispSec % 10;
 
-        if (timeLeft === 59) { 
-            document.getElementById("betInfo").style.display = 'none'; // Clear bet info on new round
-        }
-        if (timeLeft === 1) { 
-            processRoundResult(pId);
-        }
-    }, 1000);
-
-    async function processRoundResult(pId) {
-        const betsSnap = await db.ref('current_bets').get();
-        const allBets = betsSnap.val() || {};
-        
-        let totals = { Green: 0, Red: 0, Violet: 0 };
-        Object.values(allBets).forEach(b => { totals[b.color] += b.amount; });
-
-        let winColor;
-        const totalBets = totals.Green + totals.Red + totals.Violet;
-
-        if (totalBets > 0) {
-            // --- USER BETTING LOGIC (3/5 PROFIT) ---
-            if ([1, 3, 5].includes(roundStep)) {
-                // Profit Mode: Wo color jisme sabse KAM paisa laga hai
-                let minAmt = Math.min(totals.Green, totals.Red);
-                winColor = (totals.Green === minAmt) ? "Green" : "Red";
-                
-                // 10% chance ki Violet bhi aa jaye agar usme bet zero ho
-                if(totals.Violet === 0 && Math.random() < 0.1) winColor = "Violet";
-            } else {
-                // Trust Mode: Randomly choose Red or Green
-                winColor = Math.random() > 0.5 ? "Green" : "Red";
-            }
-        } else {
-            // --- ANALYSIS MODE (NO BETS) ---
-            // Har round ek naya random chance hai (No fixed sequence)
-            let rand = Math.floor(Math.random() * 100); 
+        // Round Change Trigger
+        if (currentPeriod !== currentPeriodMath) {
+            currentPeriod = currentPeriodMath;
+            document.getElementById("periodDisp").innerText = currentPeriod;
+            isLocked = false;
+            document.getElementById("lockScreen").style.display = 'none';
+            myCurrentBets = []; // Reset bets for new round
             
-            if (rand < 34) {
-                winColor = "Green";
-            } else if (rand < 67) {
-                winColor = "Red";
-            } else {
-                winColor = "Violet";
-            }
-            // Is logic se kabhi lagatar 3 baar Red aa sakta hai, toh kabhi mix.
+            checkAndGeneratePreResult(currentPeriod);
+            cleanupOldFutureResults(); // Call the 5-min auto delete
         }
 
-        // Winning Distribution (Fantasy11 WinBal Sync)
-        for (let uid in allBets) {
-            if (allBets[uid].color === winColor) {
-                db.ref(`users/${uid}/winBal`).transaction(current => {
-                    return (current || 0) + (allBets[uid].amount * 1.9);
+        // Lock at 5 seconds
+        if (dispSec <= 5 && dispSec > 0 && !isLocked) {
+            isLocked = true;
+            document.getElementById("lockScreen").style.display = 'flex';
+            closeBet();
+        }
+
+        // Result Process trigger exactly at 0
+        if (dispSec === 0 && isLocked) {
+            isLocked = false; // Prevent multiple triggers
+            processWingoResult(currentPeriod);
+        }
+
+    }, 200);
+
+    // --- ADMIN PRE-SEE LOGIC & AUTO-CLEANUP ---
+    function cleanupOldFutureResults() {
+        // Find the exact time 5 minutes ago and generate its period ID
+        let oldTime = Date.now() - (5 * 60 * 1000); 
+        let oldPeriod = generatePeriodID(oldTime);
+        
+        // Remove from Firebase
+        db.ref(`wingo/future_results/${oldPeriod}`).remove();
+        
+        // Extra safety: remove 6 min old as well just in case app was closed during that minute
+        let olderPeriod = generatePeriodID(oldTime - (60 * 1000));
+        db.ref(`wingo/future_results/${olderPeriod}`).remove();
+    }
+
+    function checkAndGeneratePreResult(period) {
+        db.ref(`wingo/future_results/${period}`).once('value', s => {
+            if (!s.exists()) {
+                let ranNum = Math.floor(Math.random() * 10);
+                let col = [1,3,7,9].includes(ranNum) ? "Green" : ([2,4,6,8].includes(ranNum) ? "Red" : (ranNum === 0 ? "Red/Violet" : "Green/Violet"));
+                let sz = ranNum >= 5 ? "Big" : "Small";
+                db.ref(`wingo/future_results/${period}`).set({
+                    number: ranNum,
+                    color_prediction: col,
+                    size_prediction: sz
                 });
             }
-        }
-
-        // History update aur Step increment
-        await db.ref('history').push({ pId: pId, winColor: winColor });
-        await db.ref('current_bets').remove();
-        
-        // Round tracker ko 1 se 5 ke beech ghumate rehna
-        roundStep = (roundStep >= 5) ? 1 : roundStep + 1;
+        });
     }
 
-    function bet(color) {
-        let amt = prompt(`${color} Bet Amount:`, "100");
-        const betAmt = parseInt(amt);
-        if (betAmt >= 10) {
-            db.ref(`users/${userUID}`).once('value', async s => {
-                const d = s.val() || {};
-                let bonus = d.balance || 0;
-                let win = d.winBal || 0;
-                
-                if ((bonus + win) >= betAmt) {
-                    // Logic: Use Bonus first, then Winning
-                    if (bonus >= betAmt) { bonus -= betAmt; } 
-                    else { let rem = betAmt - bonus; bonus = 0; win -= rem; }
+    // --- BETTING UI ---
+    let selectedBetType = "";
+    function openBet(type) {
+        if(isLocked) return;
+        selectedBetType = type;
+        let bg = "#fff";
+        if(['Green','1','3','7','9'].includes(type)) bg = "var(--green)";
+        if(['Red','2','4','6','8'].includes(type)) bg = "var(--red)";
+        if(['Violet','0','5'].includes(type)) bg = "var(--violet)";
+        if(type === 'Big') bg = "var(--gold)";
+        if(type === 'Small') bg = "var(--blue)";
+        
+        document.getElementById("betHead").innerText = `Bet on ${type}`;
+        document.getElementById("betHead").style.background = bg;
+        if(type === 'Big' || type === 'Small') document.getElementById("betHead").style.color = "#000";
+        else document.getElementById("betHead").style.color = "#fff";
 
-                    await db.ref(`users/${userUID}`).update({ balance: bonus, winBal: win });
-                    await db.ref(`current_bets/${userUID}`).set({ color, amount: betAmt });
-                    
-                    document.getElementById("betInfo").style.display = 'block';
-                    document.getElementById("betColorText").innerText = color;
-                    document.getElementById("betColorText").style.color = `var(--${color.toLowerCase()})`;
-                    document.getElementById("betAmountText").innerText = "₹" + betAmt;
-                } else alert("Paisa nahi hai bhai!");
+        document.getElementById("betOverlay").style.display = 'flex';
+    }
+    
+    function closeBet() { document.getElementById("betOverlay").style.display = 'none'; }
+
+    async function confirmBet() {
+        let amt = parseInt(document.getElementById("betAmount").value);
+        if(isNaN(amt) || amt < 10) { showMsg("Minimum bet is ₹10"); return; }
+        
+        let totalHas = currentBalance + currentWinBal;
+        if(totalHas < amt) { showMsg("Insufficient Balance!"); return; }
+
+        // Deduct Logic
+        let b = currentBalance; let w = currentWinBal;
+        if(b >= amt) { b -= amt; } else { let rem = amt - b; b = 0; w -= rem; }
+        
+        await db.ref(`users/${userUID}`).update({ balance: b, winBal: w });
+        
+        // Save Bet
+        let betObj = { type: selectedBetType, amount: amt, uid: userUID };
+        await db.ref(`wingo/bets/${currentPeriod}`).push(betObj);
+        
+        myCurrentBets.push(betObj);
+        closeBet();
+    }
+
+    // --- RESULT PROCESSING & MODAL ---
+    async function processWingoResult(processPeriod) {
+        // Fetch Result (admin can manipulate this before time is up)
+        let resSnap = await db.ref(`wingo/future_results/${processPeriod}`).get();
+        let resData = resSnap.val();
+        let winNum = 0;
+        
+        if (resData && typeof resData === 'object' && resData.number !== undefined) {
+            winNum = parseInt(resData.number);
+        } else if (resData !== null && !isNaN(resData)) {
+            winNum = parseInt(resData); // Fallback if admin manually types just a number
+        } else {
+            winNum = Math.floor(Math.random() * 10);
+        }
+
+        // Determine Props
+        let winColor = [];
+        if([1,3,7,9].includes(winNum)) winColor = ["Green"];
+        else if([2,4,6,8].includes(winNum)) winColor = ["Red"];
+        else if(winNum === 0) winColor = ["Red", "Violet"];
+        else if(winNum === 5) winColor = ["Green", "Violet"];
+
+        let winSize = winNum >= 5 ? "Big" : "Small";
+
+        // Save to History (Only one client does this ideally, but checking exists prevents overwrite)
+        let histSnap = await db.ref(`wingo/history/${processPeriod}`).get();
+        if(!histSnap.exists()){
+            await db.ref(`wingo/history/${processPeriod}`).set({
+                period: String(processPeriod), number: winNum, size: winSize, colors: winColor.join(',')
             });
         }
+
+        // Calculate Winnings for ME
+        if(myCurrentBets.length > 0) {
+            let totalWinAmt = 0;
+            let totalLossAmt = 0;
+
+            myCurrentBets.forEach(bet => {
+                let won = false;
+                let multiplier = 0;
+
+                // Number Bet
+                if(!isNaN(bet.type) && parseInt(bet.type) === winNum) { won = true; multiplier = 9; }
+                // Size Bet
+                else if(bet.type === winSize) { won = true; multiplier = 1.9; }
+                // Color Bet
+                else if(winColor.includes(bet.type)) {
+                    won = true;
+                    // Half win rule for 0 and 5 on colors
+                    if((winNum === 0 && bet.type === "Red") || (winNum === 5 && bet.type === "Green")) {
+                        multiplier = 1.5;
+                    } 
+                    else if(bet.type === "Violet") { multiplier = 4.5; }
+                    else { multiplier = 1.9; }
+                }
+
+                if(won) { totalWinAmt += (bet.amount * multiplier); }
+                else { totalLossAmt += bet.amount; }
+            });
+
+            // Credit winnings
+            if(totalWinAmt > 0) {
+                db.ref(`users/${userUID}/winBal`).transaction(cur => (cur || 0) + totalWinAmt);
+                showResultModal(true, totalWinAmt, processPeriod, winNum, winColor.join('/'), winSize);
+            } else if(totalLossAmt > 0) {
+                showResultModal(false, totalLossAmt, processPeriod, winNum, winColor.join('/'), winSize);
+            }
+        }
     }
 
-    // Load Last 10 Rounds
-    db.ref('history').limitToLast(10).on('value', s => {
+    function showResultModal(isWin, amt, period, num, col, size) {
+        let card = document.getElementById("resultCard");
+        let title = document.getElementById("resTitle");
+        let amtTxt = document.getElementById("resAmt");
+        
+        document.getElementById("resDetails").innerHTML = `Period: ${period}<br>Number: <span style='color:#fff;font-weight:bold'>${num}</span> | Color: ${col}<br>Size: ${size}`;
+
+        if(isWin) {
+            card.style.borderColor = "var(--green)"; title.style.color = "var(--green)";
+            title.innerText = "WINNING!"; amtTxt.innerText = "+₹" + amt.toFixed(2);
+            amtTxt.style.color = "var(--green)";
+        } else {
+            card.style.borderColor = "var(--border)"; title.style.color = "var(--border)";
+            title.innerText = "LOSS!"; amtTxt.innerText = "-₹" + amt.toFixed(2);
+            amtTxt.style.color = "var(--text)";
+        }
+        document.getElementById("resultOverlay").style.display = 'flex';
+    }
+
+    // --- LOAD HISTORY ---
+    // Added orderByKey() and a filter to prevent corrupted data from breaking the table
+    db.ref('wingo/history').orderByKey().limitToLast(15).on('value', s => {
         const tbody = document.getElementById("historyBody");
         tbody.innerHTML = "";
         let data = s.val();
-        if(data) Object.values(data).reverse().forEach(v => {
-            tbody.innerHTML += `<tr><td>${v.pId}</td><td><span class="dot" style="background:var(--${v.winColor.toLowerCase()})"></span></td><td>${v.winColor}</td></tr>`;
-        });
+        if(data) {
+            // Check mapping and ignore any empty records
+            let arr = Object.values(data).filter(v => v && v.period);
+            arr.sort((a,b) => String(b.period).localeCompare(String(a.period)));
+            
+            arr.slice(0, 10).forEach(v => {
+                let colDots = v.colors.split(',').map(c => {
+                    let bg = c==="Green" ? "var(--green)" : (c==="Red" ? "var(--red)" : "var(--violet)");
+                    return `<span class="dot" style="background:${bg}"></span>`;
+                }).join(' ');
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td style="font-size:12px">${v.period}</td>
+                        <td style="font-size:20px; font-weight:bold; color:${v.colors.includes('Green')?'var(--green)':'var(--red)'}">${v.number}</td>
+                        <td style="color:${v.size==='Big'?'var(--gold)':'var(--blue)'}">${v.size}</td>
+                        <td>${colDots}</td>
+                    </tr>
+                `;
+            });
+        }
     });
 </script>
 </body>
