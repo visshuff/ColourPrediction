@@ -139,7 +139,12 @@
     </div>
 </div>
 
-<div class="history">
+<!-- Updated Global History Section with My History Button -->
+<div class="history" style="position:relative;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <div style="font-weight:bold; font-size:16px;">Global History</div>
+        <button onclick="openMyHistorySafe()" style="background:var(--blue); color:#fff; border:none; padding:6px 12px; border-radius:6px; font-weight:bold; cursor:pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.3);">My History</button>
+    </div>
     <table id="histTable">
         <thead>
             <tr>
@@ -171,13 +176,34 @@
     <button class="custom-alert-btn" onclick="closeCustomAlert()">OK</button>
 </div>
 
-<!-- Result Modal (Fixed with Manual Close Button) -->
+<!-- Result Modal -->
 <div class="overlay" id="resultOverlay">
     <div class="result-box" id="resultCard">
         <div class="res-title" id="resTitle"></div>
         <div class="res-amt" id="resAmt"></div>
         <div class="res-details" id="resDetails"></div>
         <button class="close-popup-btn" onclick="document.getElementById('resultOverlay').style.display='none'">Close</button>
+    </div>
+</div>
+
+<!-- NEW: My History Modal (Optimized & Safe) -->
+<div class="overlay" id="myHistoryOverlay" style="z-index: 120; display:none; justify-content:center; align-items:center;">
+    <div class="bet-box" style="width: 95%; max-width: 400px; max-height: 80vh; display: flex; flex-direction: column; background: var(--card); border-radius: 15px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.8);">
+        <div class="bet-head" style="background: var(--blue); padding: 15px; text-align: center; font-weight: bold; font-size: 18px; color: #fff;">My Bets History</div>
+        <div class="bet-body" style="overflow-y: auto; padding: 10px; max-height: 50vh;">
+            <table style="width: 100%; text-align: center; border-collapse: collapse; font-size: 13px;">
+                <thead>
+                    <tr style="color: #aaa; border-bottom: 1px solid var(--border);">
+                        <th style="padding:8px 5px;">Period</th>
+                        <th style="padding:8px 5px;">Select</th>
+                        <th style="padding:8px 5px;">Amt</th>
+                        <th style="padding:8px 5px;">Status</th>
+                    </tr>
+                </thead>
+                <tbody id="myHistoryBody"></tbody>
+            </table>
+        </div>
+        <button onclick="document.getElementById('myHistoryOverlay').style.display='none'" style="background: #333; color: #fff; padding: 15px; border: none; font-size: 16px; font-weight: bold; cursor: pointer; width: 100%; border-top: 1px solid var(--border);">Close</button>
     </div>
 </div>
 
@@ -302,7 +328,7 @@
         if (currentPeriod !== currentPeriodMath) {
             let previousPeriod = currentPeriod;
             
-            // BUG FIX: Array ko clear karne se pehle ek backup copy bana li
+            // Backup copy for results
             let betsToProcess = [...myCurrentBets]; 
             
             if (previousPeriod !== "") {
@@ -318,14 +344,13 @@
                 });
 
                 setTimeout(() => {
-                    // BUG FIX: Backup array ko hi pass kar rahe hain jisme current bet data store hai
                     processWingoResult(previousPeriod, betsToProcess);
                 }, 500);
             }
 
             currentPeriod = currentPeriodMath;
             document.getElementById("periodDisp").innerText = currentPeriod;
-            myCurrentBets = []; // Reset bets for new round
+            myCurrentBets = []; 
             
             // Background catch-up
             db.ref('wingo/future_results').orderByKey().limitToLast(5).once('value', snapshot => {
@@ -457,24 +482,22 @@
                 let won = false;
                 let multiplier = 0;
 
-                // MULTIPLIER FIXES
                 if(!isNaN(bet.type) && parseInt(bet.type) === winNum) { 
-                    won = true; multiplier = 8.88; // Number win 8.88x
+                    won = true; multiplier = 8.88; 
                 }
                 else if(bet.type === winSize) { 
-                    won = true; multiplier = 1.96; // Size win 1.96x
+                    won = true; multiplier = 1.96; 
                 }
                 else if(winColor.includes(bet.type)) {
                     won = true;
-                    // Agar zero ya 5 aaya toh color par half win milta hai
                     if((winNum === 0 && bet.type === "Red") || (winNum === 5 && bet.type === "Green")) {
                         multiplier = 1.47; 
                     } 
                     else if(bet.type === "Violet") { 
-                        multiplier = 4.44; // Violet ke liye
+                        multiplier = 4.44; 
                     }
                     else { 
-                        multiplier = 1.98; // Pure Color win 1.98x
+                        multiplier = 1.98; 
                     }
                 }
 
@@ -511,11 +534,10 @@
             <div style="font-size:12px; color:#888;">Period ID: ${period}</div>
         `;
 
-        // Yaha se Timeout Hata Diya hai! Popup band nahi hoga ab automatically
         overlay.style.display = 'flex';
     }
     
-    // --- LOAD HISTORY ---
+    // --- LOAD GLOBAL HISTORY ---
     db.ref('wingo/history').orderByChild('timestamp').limitToLast(10).on('value', s => {
         const tbody = document.getElementById("historyBody");
         tbody.innerHTML = "";
@@ -544,7 +566,97 @@
             });
         }
     });
-    
+
+    // --- NEW: MY HISTORY SAFE FUNCTION ---
+    async function openMyHistorySafe() {
+        try {
+            document.getElementById('myHistoryOverlay').style.display = 'flex';
+            const tbody = document.getElementById("myHistoryBody");
+            tbody.innerHTML = "<tr><td colspan='4' style='padding:20px; color:#fff;'>Loading data... Please wait.</td></tr>";
+
+            if(!userUID) {
+                tbody.innerHTML = "<tr><td colspan='4' style='padding:20px; color:var(--red);'>User ID not found!</td></tr>";
+                return;
+            }
+
+            let myBetsHTML = "";
+            
+            // 1. Show Pending Bets
+            if (typeof myCurrentBets !== 'undefined' && Array.isArray(myCurrentBets) && myCurrentBets.length > 0) {
+                myCurrentBets.forEach(b => {
+                    myBetsHTML += `
+                        <tr style="border-bottom: 1px dashed var(--border);">
+                            <td style="padding:12px 5px; font-size:11px; color:#aaa;">${currentPeriod || 'Pending'}</td>
+                            <td style="padding:12px 5px; font-weight:bold; color:var(--gold);">${b.type}</td>
+                            <td style="padding:12px 5px;">₹${b.amount}</td>
+                            <td style="padding:12px 5px; font-size:12px; color:var(--blue); font-weight:bold;">Pending...</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            // 2. Fetch History Safely (No blocking loop)
+            let snap = await db.ref('wingo/history').orderByChild('timestamp').limitToLast(15).once('value');
+            let histData = snap.val();
+            
+            if (histData) {
+                let periods = Object.values(histData)
+                                    .filter(p => p && p.period)
+                                    .sort((a,b) => String(b.period).localeCompare(String(a.period)));
+                
+                for (let p of periods) {
+                    if(!p.period) continue; 
+                    
+                    // Sirf current user ki bet fetch hogi, memory full nahi hogi
+                    let betSnap = await db.ref('wingo/bets/' + p.period).orderByChild('uid').equalTo(userUID).once('value');
+                    let bets = betSnap.val();
+                    
+                    if (bets) {
+                        Object.values(bets).forEach(b => {
+                            if(b && b.amount) {
+                                let winNum = parseInt(p.number);
+                                let winColor = [];
+                                if([1,3,7,9].includes(winNum)) winColor = ["Green"];
+                                else if([2,4,6,8].includes(winNum)) winColor = ["Red"];
+                                else if(winNum === 0) winColor = ["Red", "Violet"];
+                                else if(winNum === 5) winColor = ["Green", "Violet"];
+                                
+                                let winSize = winNum >= 5 ? "Big" : "Small";
+                                let won = false;
+                                let multiplier = 0;
+                                
+                                if(!isNaN(b.type) && parseInt(b.type) === winNum) { won = true; multiplier = 8.88; }
+                                else if(b.type === winSize) { won = true; multiplier = 1.96; }
+                                else if(winColor.includes(b.type)) {
+                                    won = true;
+                                    if((winNum === 0 && b.type === "Red") || (winNum === 5 && b.type === "Green")) { multiplier = 1.47; } 
+                                    else if(b.type === "Violet") { multiplier = 4.44; }
+                                    else { multiplier = 1.98; }
+                                }
+
+                                let statusText = won ? `<span style="color:var(--green)">Win (+₹${(b.amount * multiplier).toFixed(2)})</span>` : `<span style="color:var(--red)">Loss (-₹${b.amount})</span>`;
+                                
+                                myBetsHTML += `
+                                    <tr style="border-bottom: 1px solid var(--border);">
+                                        <td style="padding:12px 5px; font-size:11px; color:#aaa;">${p.period}</td>
+                                        <td style="padding:12px 5px; font-weight:bold;">${b.type}</td>
+                                        <td style="padding:12px 5px;">₹${b.amount}</td>
+                                        <td style="padding:12px 5px; font-weight:bold; font-size:12px;">${statusText}</td>
+                                    </tr>
+                                `;
+                            }
+                        });
+                    }
+                }
+            }
+            
+            tbody.innerHTML = myBetsHTML || "<tr><td colspan='4' style='padding:20px; color:#888;'>No bet history found</td></tr>";
+
+        } catch (error) {
+            console.error("My History Error: ", error);
+            document.getElementById("myHistoryBody").innerHTML = "<tr><td colspan='4' style='padding:20px; color:var(--red); font-weight:bold;'>Error loading data!</td></tr>";
+        }
+    }
 </script>
 </body>
 </html>
