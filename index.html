@@ -75,19 +75,55 @@
         #lockScreen { position: absolute; top:0; left:0; width: 100%; height: 100%; background: rgba(20,20,22,0.8); z-index: 50; display: none; align-items: center; justify-content: center; border-radius: 10px; }
         .lock-msg { font-size: 24px; color: var(--red); font-weight: bold; background: #000; padding: 10px 20px; border-radius: 8px; border: 1px solid var(--red); text-transform: uppercase; letter-spacing: 2px; box-shadow: 0 0 15px rgba(248,73,96,0.5); }
    
-        /* Professional Result Popup Styles */
-        .result-box { background: var(--card2); width: 85%; max-width: 320px; border-radius: 20px; padding: 25px 20px; text-align: center; position: relative; animation: popIn 0.3s; border: 3px solid var(--border); color: var(--text); box-shadow: 0 10px 25px rgba(0,0,0,0.6); }
-        .res-title { font-size: 26px; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
-        .res-amt { font-size: 36px; font-weight: 800; margin: 15px 0; font-family: 'Courier New', monospace; }
-        .res-details { background: var(--card); padding: 12px; border-radius: 12px; font-size: 14px; color: #bbb; border: 1px solid var(--border); line-height: 1.6; }
-        .win-theme { border-color: var(--green); color: var(--green); background: linear-gradient(180deg, #1e3c2f 0%, var(--card2) 100%); }
-        .win-theme .res-amt { color: var(--gold); text-shadow: 0 0 10px rgba(252, 213, 53, 0.3); }
-        .lose-theme { border-color: var(--red); color: var(--red); background: linear-gradient(180deg, #3c1e23 0%, var(--card2) 100%); }
-        .lose-theme .res-amt { color: #fff; }
-        @keyframes popIn { 0% {transform: scale(0.7); opacity: 0;} 100% {transform: scale(1); opacity: 1;} }
+        /* =========================================
+           PREMIUM RESULT MODAL (SCREENSHOT MATCHED)
+           ========================================= */
+        #resultOverlay { z-index: 300; flex-direction: column; }
+        .premium-res-card { width: 85%; max-width: 340px; border-radius: 20px; text-align: center; position: relative; animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); padding-bottom: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.7); margin-top: 30px; }
         
-        .close-popup-btn { width: 100%; padding: 12px; margin-top: 15px; background: var(--gold); color: #000; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); transition: 0.2s; text-transform: uppercase; letter-spacing: 1px; }
-        .close-popup-btn:active { transform: scale(0.95); }
+        .win-theme { background: linear-gradient(180deg, #ff8a00 0%, #ff5e00 100%); color: #fff; }
+        .lose-theme { background: linear-gradient(180deg, #d3dde6 0%, #b8c6d1 100%); color: #333; }
+
+        /* Badge/Ribbon Header */
+        .res-badge { position: absolute; top: -50px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; width: 100%; }
+        .res-medal { width: 80px; height: 80px; border-radius: 50%; background: #ffd700; display: flex; align-items: center; justify-content: center; font-size: 40px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); border: 5px solid #fff; z-index: 10; position: relative; }
+        .lose-theme .res-medal { background: #b0bec5; }
+        
+        .res-title-text { font-size: 28px; font-weight: 900; margin-top: 45px; text-shadow: 1px 2px 4px rgba(0,0,0,0.2); }
+        .lose-theme .res-title-text { color: #546e7a; text-shadow: none; }
+
+        /* Lottery Results Mini Box */
+        .res-lottery-info { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 15px; font-size: 14px; opacity: 0.9; font-weight: bold; }
+        .res-pill { padding: 4px 12px; border-radius: 4px; color: #fff; font-size: 14px; text-transform: capitalize; }
+        .res-circle { width: 22px; height: 22px; border-radius: 50%; display: flex; justify-content: center; align-items: center; color: #fff; font-size: 14px; }
+        
+        /* 3D Paper Slip Slot System */
+        .slip-container { width: 85%; margin: 20px auto 10px; position: relative; }
+        .slip-slot { height: 12px; background: rgba(0,0,0,0.2); border-radius: 10px; box-shadow: inset 0 3px 6px rgba(0,0,0,0.4); position: relative; z-index: 5; }
+        .win-theme .slip-slot { background: #c53815; box-shadow: inset 0 3px 6px rgba(100,0,0,0.5); }
+        
+        .slip-paper { background: linear-gradient(180deg, #ffffff 0%, #f1f1f1 100%); margin: -6px auto 0; width: 90%; padding: 20px 10px 15px; border-radius: 0 0 10px 10px; position: relative; z-index: 2; box-shadow: 0 8px 15px rgba(0,0,0,0.2); animation: slipSlide 0.6s ease-out forwards; transform-origin: top; }
+        
+        @keyframes slipSlide { 0% { transform: scaleY(0); opacity: 0; } 100% { transform: scaleY(1); opacity: 1; } }
+        
+        .slip-heading { color: #888; font-size: 16px; font-weight: bold; margin-bottom: 5px; }
+        .win-theme .slip-heading { color: #e91e63; }
+        
+        .slip-amount { font-size: 32px; font-weight: 900; color: #333; margin-bottom: 10px; font-family: 'Arial Black', sans-serif; }
+        .win-theme .slip-amount { color: #673ab7; } /* Purple bonus color like screenshot */
+        
+        .slip-period-info { font-size: 11px; color: #999; line-height: 1.4; }
+
+        /* Auto Close Text */
+        .auto-close-box { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 15px; font-size: 13px; opacity: 0.8; }
+        .check-icon { width: 18px; height: 18px; border-radius: 50%; background: rgba(255,255,255,0.3); display: flex; justify-content: center; align-items: center; font-size: 10px; }
+        .lose-theme .check-icon { background: rgba(0,0,0,0.1); color: #333; }
+
+        /* Close Button outside card */
+        .btn-close-circle { margin-top: 25px; width: 45px; height: 45px; border-radius: 50%; border: 2px solid #fff; background: transparent; color: #fff; font-size: 20px; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: 0.2s; }
+        .btn-close-circle:active { transform: scale(0.9); background: rgba(255,255,255,0.2); }
+
+        @keyframes popIn { 0% {transform: scale(0.6); opacity: 0;} 100% {transform: scale(1); opacity: 1;} }
     </style>
 </head>
 <body>
@@ -139,7 +175,6 @@
     </div>
 </div>
 
-<!-- Updated Global History Section with My History Button -->
 <div class="history" style="position:relative;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
         <div style="font-weight:bold; font-size:16px;">Global History</div>
@@ -169,24 +204,47 @@
     </div>
 </div>
 
-<!-- Custom Alert Popup -->
 <div class="overlay" id="alertOverlay" style="z-index: 150;"></div>
 <div class="custom-alert" id="customAlertBox">
     <div id="customAlertMsg" style="font-size: 16px; margin-bottom: 10px;">Message</div>
     <button class="custom-alert-btn" onclick="closeCustomAlert()">OK</button>
 </div>
 
-<!-- Result Modal -->
 <div class="overlay" id="resultOverlay">
-    <div class="result-box" id="resultCard">
-        <div class="res-title" id="resTitle"></div>
-        <div class="res-amt" id="resAmt"></div>
-        <div class="res-details" id="resDetails"></div>
-        <button class="close-popup-btn" onclick="document.getElementById('resultOverlay').style.display='none'">Close</button>
+    <div class="premium-res-card" id="resCard">
+        <div class="res-badge">
+            <div class="res-medal" id="resMedalIcon">🚀</div>
+        </div>
+        
+        <div class="res-title-text" id="resTitle">Congratulations</div>
+        
+        <div class="res-lottery-info">
+            Lottery results 
+            <span class="res-pill" id="resColBox">Red</span>
+            <span class="res-circle" id="resNumBox">6</span>
+            <span class="res-pill" id="resSizeBox">Big</span>
+        </div>
+        
+        <div class="slip-container">
+            <div class="slip-slot"></div>
+            <div class="slip-paper">
+                <div class="slip-heading" id="slipHead">Bonus</div>
+                <div class="slip-amount" id="resAmtTxt">₹0.00</div>
+                <div class="slip-period-info">
+                    Period: WinGo 1 Min<br>
+                    <span id="resPeriodTxt">20260608100010250</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="auto-close-box">
+            <div class="check-icon">✓</div>
+            <span id="resTimer">3</span> seconds auto close
+        </div>
     </div>
+    <button class="btn-close-circle" onclick="forceCloseResult()">✕</button>
 </div>
 
-<!-- NEW: My History Modal (Optimized & Safe) -->
 <div class="overlay" id="myHistoryOverlay" style="z-index: 120; display:none; justify-content:center; align-items:center;">
     <div class="bet-box" style="width: 95%; max-width: 400px; max-height: 80vh; display: flex; flex-direction: column; background: var(--card); border-radius: 15px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.8);">
         <div class="bet-head" style="background: var(--blue); padding: 15px; text-align: center; font-weight: bold; font-size: 18px; color: #fff;">My Bets History</div>
@@ -222,6 +280,7 @@
     let currentPeriod = "";
     let isLocked = false;
     let myCurrentBets = []; 
+    let resTimerInterval; // For popup
     
     // --- OFFLINE BACKFILL ENGINE ---
     function generatePastMissingHistory() {
@@ -258,7 +317,6 @@
     // History save function
     async function saveToHistory(period, num, col, sz) {
         const histRef = db.ref(`wingo/history/${period}`);
-        
         let colorString = Array.isArray(col) ? col.join(',') : String(col);
 
         histRef.once('value', (snap) => {
@@ -277,9 +335,7 @@
         db.ref(`wingo/history`).orderByChild('timestamp').limitToFirst(1).once('value', (s) => {
             s.forEach((child) => {
                 db.ref(`wingo/history`).orderByChild('timestamp').once('value', (all) => {
-                    if (all.numChildren() > 15) {
-                        child.ref.remove();
-                    }
+                    if (all.numChildren() > 15) { child.ref.remove(); }
                 });
             });
         });
@@ -390,9 +446,6 @@
         let oldTime = Date.now() - (5 * 60 * 1000); 
         let oldPeriod = generatePeriodID(oldTime);
         db.ref(`wingo/future_results/${oldPeriod}`).remove();
-        
-        let olderPeriod = generatePeriodID(oldTime - (60 * 1000));
-        db.ref(`wingo/future_results/${olderPeriod}`).remove();
     }
 
     function checkAndGeneratePreResult(period) {
@@ -452,7 +505,7 @@
         showMsg("Bet Placed Successfully!");
     }
 
-    // --- RESULT PROCESSING & MODAL ---
+    // --- RESULT PROCESSING & PREMIUM MODAL ---
     async function processWingoResult(processPeriod, betsToProcess) {
         let resSnap = await db.ref(`wingo/future_results/${processPeriod}`).get();
         let resData = resSnap.val();
@@ -490,15 +543,9 @@
                 }
                 else if(winColor.includes(bet.type)) {
                     won = true;
-                    if((winNum === 0 && bet.type === "Red") || (winNum === 5 && bet.type === "Green")) {
-                        multiplier = 1.47; 
-                    } 
-                    else if(bet.type === "Violet") { 
-                        multiplier = 4.44; 
-                    }
-                    else { 
-                        multiplier = 1.98; 
-                    }
+                    if((winNum === 0 && bet.type === "Red") || (winNum === 5 && bet.type === "Green")) { multiplier = 1.47; } 
+                    else if(bet.type === "Violet") { multiplier = 4.44; }
+                    else { multiplier = 1.98; }
                 }
 
                 if(won) { totalWinAmt += (bet.amount * multiplier); }
@@ -516,25 +563,56 @@
 
     function showResultModal(isWin, amt, period, num, col, size) {
         let overlay = document.getElementById('resultOverlay');
-        let card = document.getElementById("resultCard");
-        let title = document.getElementById("resTitle");
-        let amtTxt = document.getElementById("resAmt");
+        let card = document.getElementById("resCard");
         
-        card.className = isWin ? "result-box win-theme" : "result-box lose-theme";
-        title.innerText = isWin ? "Congratulations" : "Game Over";
-        amtTxt.innerText = isWin ? "+₹" + amt.toFixed(2) : "-₹" + amt.toFixed(2);
+        // Colors Setup
+        let bgCol = "var(--green)";
+        if(col.includes("Red")) bgCol = "var(--red)";
+        if(col.includes("Violet")) bgCol = "var(--violet)";
+        if(col.includes("Red/Violet")) bgCol = "linear-gradient(90deg, var(--red) 50%, var(--violet) 50%)";
+        if(col.includes("Green/Violet")) bgCol = "linear-gradient(90deg, var(--green) 50%, var(--violet) 50%)";
         
-        document.getElementById("resDetails").innerHTML = `
-            <div style="margin-bottom:8px; font-weight:bold; color:var(--text);">Lottery Results:</div>
-            <div style="display:flex; justify-content:center; align-items:center; gap:10px; margin-bottom:10px;">
-                <span style="background:${col.includes('Red')?'var(--red)':'var(--green)'}; color:#fff; padding:4px 12px; border-radius:6px; font-size:12px; font-weight:bold;">${col}</span>
-                <span style="font-size:18px; font-weight:bold; color:var(--gold);">${num}</span>
-                <span style="font-size:14px; font-weight:bold; color:var(--blue);">${size}</span>
-            </div>
-            <div style="font-size:12px; color:#888;">Period ID: ${period}</div>
-        `;
+        let sizeBg = size === "Big" ? "var(--gold)" : "var(--blue)";
+        let sizeText = size === "Big" ? "#000" : "#fff";
+
+        // Assign Values
+        card.className = isWin ? "premium-res-card win-theme" : "premium-res-card lose-theme";
+        document.getElementById("resTitle").innerText = isWin ? "Congratulations" : "Sorry";
+        document.getElementById("slipHead").innerText = isWin ? "Bonus" : "Lose";
+        document.getElementById("resAmtTxt").innerText = (isWin ? "" : "-") + "₹" + amt.toFixed(2);
+        document.getElementById("resPeriodTxt").innerText = period;
+        
+        // Box values update
+        let colBox = document.getElementById("resColBox");
+        colBox.innerText = col;
+        colBox.style.background = bgCol;
+        
+        let numBox = document.getElementById("resNumBox");
+        numBox.innerText = num;
+        numBox.style.background = bgCol;
+        
+        let szBox = document.getElementById("resSizeBox");
+        szBox.innerText = size;
+        szBox.style.background = sizeBg;
+        szBox.style.color = sizeText;
 
         overlay.style.display = 'flex';
+
+        // Auto Close Timer Setup
+        let timeLeft = 3;
+        document.getElementById("resTimer").innerText = timeLeft;
+        clearInterval(resTimerInterval);
+        
+        resTimerInterval = setInterval(() => {
+            timeLeft--;
+            document.getElementById("resTimer").innerText = timeLeft;
+            if(timeLeft <= 0) { forceCloseResult(); }
+        }, 1000);
+    }
+    
+    function forceCloseResult() {
+        clearInterval(resTimerInterval);
+        document.getElementById('resultOverlay').style.display = 'none';
     }
     
     // --- LOAD GLOBAL HISTORY ---
@@ -567,7 +645,7 @@
         }
     });
 
-    // --- NEW: MY HISTORY SAFE FUNCTION ---
+    // --- FIXED: 100% WORKING MY HISTORY SAFE FUNCTION ---
     async function openMyHistorySafe() {
         try {
             document.getElementById('myHistoryOverlay').style.display = 'flex';
@@ -595,7 +673,7 @@
                 });
             }
 
-            // 2. Fetch History Safely (No blocking loop)
+            // 2. Fetch History Safely (Bypassing Firebase Index rules by using JS filter)
             let snap = await db.ref('wingo/history').orderByChild('timestamp').limitToLast(15).once('value');
             let histData = snap.val();
             
@@ -607,13 +685,13 @@
                 for (let p of periods) {
                     if(!p.period) continue; 
                     
-                    // Sirf current user ki bet fetch hogi, memory full nahi hogi
-                    let betSnap = await db.ref('wingo/bets/' + p.period).orderByChild('uid').equalTo(userUID).once('value');
+                    // 🔥 MAGIC FIX: pure '.once' request without '.orderByChild', filtered safely via JS 🔥
+                    let betSnap = await db.ref('wingo/bets/' + p.period).once('value');
                     let bets = betSnap.val();
                     
                     if (bets) {
                         Object.values(bets).forEach(b => {
-                            if(b && b.amount) {
+                            if(b && b.uid === userUID && b.amount) {  // JavaScript Filtering!
                                 let winNum = parseInt(p.number);
                                 let winColor = [];
                                 if([1,3,7,9].includes(winNum)) winColor = ["Green"];
